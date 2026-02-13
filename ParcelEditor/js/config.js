@@ -13,8 +13,8 @@ var APP_CONFIG = {
   // ── OAuth 2.0 ───────────────────────────────────────────────────
   OAUTH_APP_ID: "iBmou4LFG3czFKPg",
 
-  // Popup callback page (must be in same directory as index.html)
-  POPUP_CALLBACK_URL: "oauth-callback.html",
+  // Popup callback page (absolute URL)
+  POPUP_CALLBACK_URL: "https://cofor-gis.github.io/gis-apps/ParcelEditor/oauth-callback.html",
 
   // ── Data Source ─────────────────────────────────────────────────
   // Hosted Feature Layer View — Parcel Exemptions (Internal)
