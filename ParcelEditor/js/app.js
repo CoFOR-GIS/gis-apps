@@ -359,12 +359,7 @@ require([
     // Sketch layer for spatial selection drawing
     sketchLayer = new GraphicsLayer({ title: "Sketches" });
 
-    // The parcel view layer
-    parcelLayer = new FeatureLayer({
-      portalItem: { id: cfg.LAYER_ITEM_ID },
-      outFields: ["*"],
-      title: "Parcels"
-    });
+    // parcelLayer already created and loaded in boot()
 
     view = new MapView({
       container: "viewDiv",
@@ -381,7 +376,6 @@ require([
     });
 
     await view.when();
-    await parcelLayer.when();
 
     // Read the coded value domain from the layer
     loadDomainValues();
@@ -867,7 +861,36 @@ require([
       await loadUserInfo();
       initSignOut();
 
-      setStatus("Loading map…");
+      setStatus("Loading parcel layer…");
+      
+      // Create and load layer first to catch permission errors early
+      parcelLayer = new FeatureLayer({
+        portalItem: { id: cfg.LAYER_ITEM_ID },
+        outFields: ["*"],
+        title: "Parcels"
+      });
+
+      try {
+        await parcelLayer.load();
+      } catch (layerErr) {
+        setStatus("Layer failed: " + layerErr.message, true);
+        console.error("Layer load error:", layerErr);
+        console.error("Layer details:", layerErr.details);
+        // Show actionable info
+        document.getElementById("selection-list").innerHTML = 
+          '<div class="selection-empty" style="color:#e55c5c;">' +
+          '<strong>Layer could not be loaded.</strong><br><br>' +
+          'Item ID: ' + cfg.LAYER_ITEM_ID + '<br><br>' +
+          'Error: ' + layerErr.message + '<br><br>' +
+          'Check that:<br>' +
+          '1. The layer item is shared with your account<br>' +
+          '2. The item ID in config.js is correct<br>' +
+          '3. The layer service is accessible' +
+          '</div>';
+        return;
+      }
+
+      setStatus("Initializing map…");
       await initMap();
 
       // Initialize managers
@@ -884,13 +907,12 @@ require([
 
       updateUndoButton();
       setStatus("Ready.");
-
-      // Clear status after a moment
       setTimeout(() => setStatus(""), 2000);
 
     } catch (e) {
       setStatus("Startup failed: " + e.message, true);
       console.error("Boot error:", e);
+      console.error("Error details:", e.details || "none");
     }
   }
 
