@@ -2,15 +2,18 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>OAuth Callback</title>
+  <title>Signing in…</title>
   <script src="https://js.arcgis.com/4.31/"></script>
   <script>
-    require(["esri/identity/OAuthInfo", "esri/identity/IdentityManager"], function (OAuthInfo, IdentityManager) {
+    require(["esri/identity/IdentityManager"], function (IdentityManager) {
       IdentityManager.setOAuthResponseHash(window.location.hash);
+      // If the popup hasn't closed after processing, close it manually
+      setTimeout(function () {
+        window.close();
+      }, 1000);
     });
   </script>
 </head>
 <body>
-  <p>Signing in…</p>
 </body>
 </html>
