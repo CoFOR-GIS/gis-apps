@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parcel Exemption Editor — City of Fair Oaks Ranch</title>
+
+  <!-- ArcGIS Maps SDK for JavaScript 4.31 -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css" />
+  <script src="https://js.arcgis.com/4.31/"></script>
+
+  <!-- Application Styles -->
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Favicon (optional: replace with FOR seal) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='24' font-size='24'>🗺</text></svg>" />
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         LEFT SIDEBAR
+         ═══════════════════════════════════════════════════════════ -->
+    <aside class="sidebar">
+
+      <!-- Header -->
+      <div class="app-header">
+        <div class="app-title">
+          Parcel Exemptions <span>Fair Oaks Ranch</span>
+        </div>
+        <div class="header-right">
+          <span class="user-label" id="user-label">…</span>
+          <button class="btn-sign-out" id="btn-sign-out">Sign out</button>
+        </div>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div class="sidebar-body">
+
+        <!-- ── Selection Tools ──────────────────────────────── -->
+        <div class="section">
+          <div class="section-label">Selection Tools</div>
+          <div class="mode-buttons">
+            <button class="btn-mode" id="btn-mode-spatial">
+              <span class="mode-icon">⬡</span> Spatial
+            </button>
+            <button class="btn-mode" id="btn-mode-filter">
+              <span class="mode-icon">☰</span> Filter
+            </button>
+            <button class="btn-mode" id="btn-mode-search">
+              <span class="mode-icon">⌕</span> Search
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Spatial Selection Panel ──────────────────────── -->
+        <div class="tool-panel" id="panel-spatial">
+          <div class="tool-panel-label">Draw to Select Parcels</div>
+          <div class="tool-row">
+            <button class="btn btn-secondary btn-full" id="btn-lasso">
+              ⬡ Lasso (Polygon)
+            </button>
+            <button class="btn btn-secondary btn-full" id="btn-rectangle">
+              ▭ Rectangle
+            </button>
+          </div>
+          <div class="tool-row">
+            <button class="btn btn-ghost btn-full" id="btn-cancel-sketch">Cancel drawing</button>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+            Parcels intersecting your shape will be added to the selection. You can also click individual parcels on the map.
+          </div>
+        </div>
+
+        <!-- ── Attribute Filter Panel ───────────────────────── -->
+        <div class="tool-panel" id="panel-filter">
+          <div class="tool-panel-label">Select by Attributes</div>
+          <div class="form-row">
+            <label class="form-label">Subdivision</label>
+            <select id="select-subdivision">
+              <option value="">Loading…</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Current Land Use</label>
+            <select id="select-landuse-filter">
+              <option value="">Loading…</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <button class="btn btn-primary btn-full" id="btn-apply-filter">
+              Add matching parcels to selection
+            </button>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+            Tip: Select a subdivision + "As is" to find all unclassified parcels in that area.
+          </div>
+        </div>
+
+        <!-- ── Search Panel ─────────────────────────────────── -->
+        <div class="tool-panel" id="panel-search">
+          <div class="tool-panel-label">Search &amp; Add Individual Parcels</div>
+          <div class="form-row">
+            <div class="input-group">
+              <input type="text" id="search-input"
+                     placeholder="Address, Prop ID, or Subdivision…" />
+              <button class="btn btn-primary" id="btn-search-go">Search</button>
+            </div>
+          </div>
+          <div class="search-results" id="search-results"></div>
+        </div>
+
+        <!-- ── Selection Summary + List ─────────────────────── -->
+        <div class="section">
+          <div class="section-label">Current Selection</div>
+          <div class="selection-summary">
+            <div class="stat">
+              <span class="stat-value" id="selection-count">0</span>
+              <span class="stat-label">Parcels</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="selection-acreage">0</span>
+              <span class="stat-label">Acres</span>
+            </div>
+            <div style="margin-left: auto; align-self: center;">
+              <button class="btn btn-ghost" id="btn-clear-selection">Clear all</button>
+            </div>
+          </div>
+
+          <div class="selection-list-container" id="selection-list">
+            <div class="selection-empty">
+              No parcels selected.<br />Use the tools above to select parcels.
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Batch Edit ───────────────────────────────────── -->
+        <div class="section">
+          <div class="section-label">Apply Edit</div>
+          <div class="edit-panel">
+            <div class="form-row">
+              <label class="form-label">Set Land Use classification for selected parcels</label>
+              <select id="select-landuse-edit">
+                <option value="" disabled selected>Loading…</option>
+              </select>
+            </div>
+            <div class="edit-actions">
+              <button class="btn btn-primary" id="btn-apply-edit" disabled>
+                Apply to selection
+              </button>
+              <button class="btn btn-danger" id="btn-undo" disabled>
+                ↩ Undo last
+              </button>
+            </div>
+            <div class="progress-bar" id="progress-bar">
+              <div class="progress-track">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+              <div class="progress-label" id="progress-label"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /sidebar-body -->
+    </aside>
+
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAP AREA
+         ═══════════════════════════════════════════════════════════ -->
+    <main class="main-area">
+      <div id="viewDiv"></div>
+      <div class="status-bar">
+        <span id="status-message">Loading…</span>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Configuration (must load before app.js) -->
+  <script src="js/config.js"></script>
+
+  <!-- Main Application -->
+  <script src="js/app.js"></script>
+</body>
+</html>
