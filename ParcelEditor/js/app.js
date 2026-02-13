@@ -323,8 +323,7 @@ require([
     const oauthInfo = new OAuthInfo({
       appId: cfg.OAUTH_APP_ID,
       portalUrl: cfg.PORTAL_URL,
-      popup: true,          // Popup-based auth — works on AGOL-hosted apps
-      popupCallbackUrl: cfg.POPUP_CALLBACK_URL
+      popup: false   // Redirect-based: page redirects to AGOL, then back
     });
     IdentityManager.registerOAuthInfos([oauthInfo]);
 
@@ -334,7 +333,6 @@ require([
       );
       return credential;
     } catch (e) {
-      // Not signed in — trigger OAuth popup
       const credential = await IdentityManager.getCredential(
         cfg.PORTAL_URL + "/sharing"
       );
