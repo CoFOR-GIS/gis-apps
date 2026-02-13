@@ -661,3 +661,39 @@ select option {
 .esri-ui-corner .esri-component {
   font-family: var(--font-sans);
 }
+
+/* Force popup to light theme for readability */
+.esri-popup__main-container {
+  background: #fff !important;
+  color: #323232 !important;
+}
+
+.esri-popup__header-title {
+  color: #323232 !important;
+}
+
+.esri-popup__content {
+  color: #4a4a4a !important;
+}
+
+.esri-feature__content-element {
+  color: #4a4a4a !important;
+}
+
+.esri-popup__footer {
+  background: #f5f5f5 !important;
+}
+
+.esri-popup__button {
+  color: #6e6e6e !important;
+}
+
+.esri-feature__fields .esri-feature__field-header {
+  color: #323232 !important;
+  background: #f0f0f0 !important;
+}
+
+.esri-feature__fields .esri-feature__field-data {
+  color: #4a4a4a !important;
+  background: #fff !important;
+}
