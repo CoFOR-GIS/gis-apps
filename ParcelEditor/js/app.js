@@ -883,8 +883,25 @@ require([
       setStatus("Initializing map…");
       await initMap();
 
-      // Disable the default popup — we handle selection ourselves
-      parcelLayer.popupEnabled = false;
+      // Configure popup template for parcel info
+      parcelLayer.popupTemplate = {
+        title: "{ADDRESS}",
+        content: [
+          {
+            type: "fields",
+            fieldInfos: [
+              { fieldName: "ADDRESS", label: "Address" },
+              { fieldName: "Subdivision_1", label: "Subdivision" },
+              { fieldName: "Land_Use", label: "Land Use" },
+              { fieldName: "Lot_Acreage", label: "Acreage", format: { digitSeparator: true, places: 2 } },
+              { fieldName: "COUNTY", label: "County" },
+              { fieldName: "PropID", label: "Property ID" },
+              { fieldName: "textImproved", label: "Parcel Status" }
+            ]
+          }
+        ]
+      };
+      parcelLayer.popupEnabled = true;
 
       // Initialize selection manager with known fields
       selectionMgr = new SelectionManager(view, parcelLayer, highlightLayer);
