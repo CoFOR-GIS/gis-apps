@@ -1,0 +1,509 @@
+/* ═══════════════════════════════════════════════════════════════
+   City of Fair Oaks Ranch — Water Meter Editor
+   Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Custom Properties ───────────────────────────────────────── */
+:root {
+  /* Fair Oaks Ranch Utilities palette */
+  --for-blue:       #1b3a5c;
+  --for-blue-light: #24507d;
+  --for-blue-dark:  #122840;
+  --for-olive:      #6b7a3d;
+  --for-olive-muted:#8d9b63;
+  --for-tan:        #c8b88a;
+  --for-tan-light:  #e4dbc4;
+  --for-cream:      #f5f1e8;
+
+  /* Functional palette */
+  --accent:         #2e86c1;
+  --accent-hover:   #2471a3;
+  --success:        #27ae60;
+  --warning:        #e67e22;
+  --danger:         #c0392b;
+
+  /* Surface */
+  --bg-primary:     #f7f8fa;
+  --bg-secondary:   #ffffff;
+  --bg-sidebar:     #1b3a5c;
+  --bg-sidebar-alt: #163250;
+  --border:         #dde2e8;
+  --border-light:   #e8ecf0;
+
+  /* Text */
+  --text-primary:   #2c3e50;
+  --text-secondary: #5d6d7e;
+  --text-inverse:   #f0f4f8;
+  --text-muted:     #8fa0b3;
+
+  /* Typography */
+  --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
+
+  /* Dimensions */
+  --sidebar-width:  380px;
+  --header-height:  52px;
+  --status-height:  30px;
+}
+
+
+/* ── Reset ───────────────────────────────────────────────────── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+
+/* ── Layout Shell ────────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  height: var(--header-height);
+  background: var(--for-blue-dark);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.app-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+
+/* ── Header ──────────────────────────────────────────────────── */
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.header-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.header-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+}
+
+.header-subtitle {
+  font-size: 10.5px;
+  color: var(--for-tan);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.header-spacer {
+  flex: 1;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.header-user svg {
+  flex-shrink: 0;
+}
+
+.user-name {
+  color: var(--for-tan-light);
+  font-weight: 500;
+}
+
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width 0.25s ease, opacity 0.2s ease;
+  z-index: 5;
+}
+
+.sidebar.collapsed {
+  width: 0;
+  border-right: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: calc(var(--header-height) + 10px);
+  left: 10px;
+  z-index: 6;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  cursor: pointer;
+  font-size: 16px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+.sidebar.collapsed ~ .main-area .sidebar-toggle {
+  display: flex;
+}
+
+
+/* ── Sidebar: Search Section ─────────────────────────────────── */
+.sidebar-search {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-primary);
+}
+
+.sidebar-search-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+#searchContainer {
+  width: 100%;
+}
+
+/* Flatten ESRI search widget */
+#searchContainer .esri-search {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+#searchContainer .esri-search__input {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+
+/* ── Sidebar: Editor ─────────────────────────────────────────── */
+.sidebar-editor {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+#editorContainer {
+  height: 100%;
+}
+
+/* Editor widget overrides */
+#editorContainer .esri-editor {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+#editorContainer .esri-editor__header {
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-light);
+}
+
+#editorContainer .esri-feature-form__group-header {
+  background: var(--for-blue);
+  color: #fff;
+  border-radius: 4px;
+  margin: 4px 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+#editorContainer .esri-feature-form__group-description {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 4px 10px 8px;
+}
+
+#editorContainer .esri-feature-form__label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+#editorContainer .esri-feature-form__field-description {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+#editorContainer .esri-input[type="text"],
+#editorContainer .esri-input[type="number"],
+#editorContainer .esri-select {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+#editorContainer .esri-input:focus,
+#editorContainer .esri-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(46,134,193,0.15);
+}
+
+
+/* ── Welcome Panel ───────────────────────────────────────────── */
+.welcome-panel {
+  padding: 24px 18px;
+  text-align: center;
+}
+
+.welcome-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  background: var(--for-blue);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.welcome-icon svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.welcome-heading {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.welcome-body {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.welcome-workflows {
+  text-align: left;
+  margin: 0 auto;
+  max-width: 280px;
+}
+
+.wf-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.wf-item:last-child {
+  border-bottom: none;
+}
+
+.wf-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.wf-badge.new       { background: #d5f5e3; color: #1e8449; }
+.wf-badge.changeout { background: #d6eaf8; color: #2471a3; }
+.wf-badge.terminate { background: #fdebd0; color: #ca6f1e; }
+
+.wf-text strong {
+  display: block;
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.wf-text span {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+
+/* ── Main / Map Area ─────────────────────────────────────────── */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+#viewDiv {
+  flex: 1;
+  width: 100%;
+  background: var(--bg-primary);
+}
+
+
+/* ── Status Bar ──────────────────────────────────────────────── */
+.status-bar {
+  height: var(--status-height);
+  background: var(--for-blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  display: inline-block;
+  margin-right: 4px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+.status-error {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.status-count {
+  color: var(--for-tan);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ── ArcGIS Widget Overrides ─────────────────────────────────── */
+.esri-view .esri-view-surface--inset-outline:focus::after {
+  outline: none !important;
+}
+
+.esri-ui-corner .esri-component {
+  font-family: var(--font-sans);
+}
+
+.esri-zoom .esri-widget--button {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.esri-zoom .esri-widget--button:hover {
+  background: var(--bg-primary);
+}
+
+.esri-basemap-toggle {
+  border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.esri-popup__main-container {
+  font-family: var(--font-sans);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 100vw;
+  }
+
+  .sidebar {
+    position: absolute;
+    top: var(--header-height);
+    left: 0;
+    height: calc(100vh - var(--header-height) - var(--status-height));
+    z-index: 20;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+  }
+
+  .sidebar.collapsed {
+    width: 0;
+  }
+
+  .sidebar-toggle {
+    display: flex !important;
+  }
+
+  .header-subtitle {
+    display: none;
+  }
+}
