@@ -579,6 +579,11 @@ require([
         return;
       }
 
+      // Force display names after load() — service definition overrides constructor titles
+      meterLayer.title = "Meters";
+      serviceLineLayer.title = "Service Connections";
+      waterMainLayer.title = "Distribution Mains";
+
       setStatus("Loading map...");
       await initMap();
 
