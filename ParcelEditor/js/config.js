@@ -11,7 +11,7 @@ var APP_CONFIG = {
   PORTAL_URL: "https://fairoaksranch.maps.arcgis.com",
 
   // ── OAuth 2.0 ───────────────────────────────────────────────────
-  OAUTH_APP_ID: "iBmou4LFG3czFKPg",
+  OAUTH_APP_ID: "JzMBy8soKL0MZN3C",
 
   // ── Data Source ─────────────────────────────────────────────────
   // Hosted Feature Layer View — Parcel Exemptions (Internal)
