@@ -127,10 +127,12 @@ require([
       layers: [boundaryLayer, meterLayer]
     });
 
-    // View — initial center is placeholder; goTo boundary extent on load
+    // View — starts with a safe initial center; refined by boundary extent
     view = new MapView({
       container: "viewDiv",
       map: map,
+      center: [-98.69, 29.74],
+      zoom: 14,
       padding: { left: 0 },
       ui: { components: ["attribution"] },
       constraints: { minZoom: 12 },
@@ -144,13 +146,14 @@ require([
     });
 
     view.when(function () {
-      // Center map on city limits extent
-      boundaryLayer.when(function () {
-        view.goTo(boundaryLayer.fullExtent).then(function () {
-          setStatus("Ready");
-        });
+      // Query the boundary layer extent to center on city limits
+      boundaryLayer.queryExtent().then(function (result) {
+        if (result && result.extent) {
+          return view.goTo(result.extent);
+        }
+      }).then(function () {
+        setStatus("Ready");
       }).catch(function () {
-        // Fallback if boundary layer fails
         setStatus("Ready");
       });
 
