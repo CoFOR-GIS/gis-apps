@@ -14,7 +14,7 @@ var APP_CONFIG = {
   PORTAL_URL: "https://fairoaksranch.maps.arcgis.com",
 
   // ── OAuth 2.0 (redirect-based, no popup) ────────────────────────
-  OAUTH_APP_ID: "YOUR_APP_ID_HERE",
+  OAUTH_APP_ID: "iBmou4LFG3czFKPg",
 
   // ── Data Source ─────────────────────────────────────────────────
   // Water Meters – Operational Edit View (Utilities – Internal)
