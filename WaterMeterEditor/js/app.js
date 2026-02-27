@@ -56,7 +56,7 @@ require([
       return serviceLineLayer.queryFeatureCount();
     }).then(function (c) {
       slCount = c;
-      countEl.textContent = mCount.toLocaleString() + " meters | " + slCount.toLocaleString() + " service lines";
+      countEl.textContent = mCount.toLocaleString() + " meters | " + slCount.toLocaleString() + " service connections";
     }).catch(function () {
       countEl.textContent = "-";
     });
@@ -429,7 +429,7 @@ require([
       view: view,
       container: "searchContainer",
       includeDefaultSources: false,
-      allPlaceholder: "Search meters, service lines...",
+      allPlaceholder: "Search meters, service connections...",
       sources: [
         {
           layer: meterLayer,
@@ -437,7 +437,7 @@ require([
           displayField: "AccntAddress",
           exactMatch: false,
           outFields: ["*"],
-          name: "Water Meters",
+          name: "Meters",
           placeholder: "Account #, Meter #, FlexNet #, Address...",
           suggestionTemplate: "{AccntAddress} - Meter {MeterNo}",
           suggestionsEnabled: true,
@@ -451,7 +451,7 @@ require([
           displayField: "RefName",
           exactMatch: false,
           outFields: ["*"],
-          name: "Service Lines",
+          name: "Service Connections",
           placeholder: "Zone, Material, Pipe Size...",
           suggestionsEnabled: true,
           minSuggestCharacters: 2,
@@ -538,7 +538,7 @@ require([
         portalItem: { id: cfg.EDIT_VIEW_ITEM_ID },
         layerId: cfg.METER_LAYER_ID,
         outFields: ["*"],
-        title: "Water Meters",
+        title: "Meters",
         popupTemplate: meterPopupTemplate(),
         editingEnabled: true
       });
@@ -548,7 +548,7 @@ require([
         portalItem: { id: cfg.EDIT_VIEW_ITEM_ID },
         layerId: cfg.SERVICE_LINE_LAYER_ID,
         outFields: ["*"],
-        title: "Service Lines",
+        title: "Service Connections",
         popupTemplate: serviceLinePopupTemplate(),
         editingEnabled: true,
         // Soft delete filter: hide retired features
@@ -559,7 +559,7 @@ require([
       waterMainLayer = new FeatureLayer({
         portalItem: { id: cfg.WATER_MAIN_ITEM_ID },
         outFields: ["*"],
-        title: "Water Mains",
+        title: "Distribution Mains",
         popupTemplate: waterMainPopupTemplate(),
         editingEnabled: false,
         listMode: "show",
