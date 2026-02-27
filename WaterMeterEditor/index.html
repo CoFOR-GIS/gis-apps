@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Water Meter Editor — City of Fair Oaks Ranch</title>
+  <title>Water Distribution Editor — City of Fair Oaks Ranch</title>
 
   <!-- ArcGIS Maps SDK for JavaScript 4.31 -->
   <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
@@ -25,7 +25,7 @@
       <!-- FOR Seal -->
       <img class="header-logo" src="logo.svg" alt="City of Fair Oaks Ranch" />
       <div class="header-titles">
-        <div class="header-title">Water Meter Editor</div>
+        <div class="header-title">Water Distribution Editor</div>
         <div class="header-subtitle">City of Fair Oaks Ranch — Utilities</div>
       </div>
     </div>
@@ -64,10 +64,10 @@
               <circle cx="12" cy="16" r="3"/>
             </svg>
           </div>
-          <div class="welcome-heading">Water Meter Editing</div>
+          <div class="welcome-heading">Water Distribution Editor</div>
           <div class="welcome-body">
-            Search for a meter above or click a meter on the map to begin editing.
-            Use the map tools to add new meters.
+            Search for a meter or service line above, or click features on the map to begin editing.
+            Water mains are shown for reference only.
           </div>
 
           <div class="welcome-workflows">
@@ -75,21 +75,28 @@
               <div class="wf-badge new">+</div>
               <div class="wf-text">
                 <strong>New Service Activation</strong>
-                <span>Click the map to place a new meter. Fill in Account, Meter No., FlexNet, and Install Date.</span>
+                <span>Place a new meter point. Fill in Account, Meter No., FlexNet, and Install Date.</span>
               </div>
             </div>
             <div class="wf-item">
-              <div class="wf-badge changeout">↻</div>
+              <div class="wf-badge changeout">&#8635;</div>
               <div class="wf-text">
                 <strong>Meter Change-Out</strong>
-                <span>Select existing meter, update Meter No. and Meter Install Date. Attach change-out documentation.</span>
+                <span>Select meter, update Meter No. and Meter Install Date. Attach change-out docs.</span>
               </div>
             </div>
             <div class="wf-item">
-              <div class="wf-badge terminate">—</div>
+              <div class="wf-badge new">+</div>
               <div class="wf-text">
-                <strong>Service Termination</strong>
-                <span>Document in Notes. Avoid deleting unless the record was created in error.</span>
+                <strong>New Service Line</strong>
+                <span>Draw a new service line. Enter pipe size, material, pressure zone.</span>
+              </div>
+            </div>
+            <div class="wf-item">
+              <div class="wf-badge terminate">&times;</div>
+              <div class="wf-text">
+                <strong>Retire Service Line</strong>
+                <span>Click a service line, then use the "Retire" button in the popup. The feature is hidden, not deleted. An admin can restore it.</span>
               </div>
             </div>
           </div>
