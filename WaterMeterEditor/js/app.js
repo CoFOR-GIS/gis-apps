@@ -102,9 +102,13 @@ require([
   function initializeApp() {
     setStatus("Loading map…");
 
-    // Feature Layer
+    // Feature Layer — loaded via portal item ID for auth compatibility
     meterLayer = new FeatureLayer({
-      url: APP_CONFIG.SERVICE_URL + "/" + APP_CONFIG.LAYER_ID,
+      portalItem: {
+        id: APP_CONFIG.LAYER_ITEM_ID,
+        portal: { url: APP_CONFIG.PORTAL_URL }
+      },
+      layerId: APP_CONFIG.LAYER_ID,
       outFields: ["*"],
       title: "Water Meters",
       popupTemplate: buildPopupTemplate(),
