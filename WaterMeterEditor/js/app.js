@@ -115,18 +115,22 @@ require([
       editingEnabled: true
     });
 
+    // Jurisdictional Boundaries — used for map centering only (not visible)
+    var boundaryLayer = new FeatureLayer({
+      url: "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services/FOR_Jurisdictional/FeatureServer",
+      visible: false
+    });
+
     // Map
     var map = new Map({
       basemap: APP_CONFIG.MAP_BASEMAP,
-      layers: [meterLayer]
+      layers: [boundaryLayer, meterLayer]
     });
 
-    // View
+    // View — initial center is placeholder; goTo boundary extent on load
     view = new MapView({
       container: "viewDiv",
       map: map,
-      center: APP_CONFIG.MAP_CENTER,
-      zoom: APP_CONFIG.MAP_ZOOM,
       padding: { left: 0 },
       ui: { components: ["attribution"] },
       constraints: { minZoom: 12 },
@@ -140,7 +144,16 @@ require([
     });
 
     view.when(function () {
-      setStatus("Ready");
+      // Center map on city limits extent
+      boundaryLayer.when(function () {
+        view.goTo(boundaryLayer.fullExtent).then(function () {
+          setStatus("Ready");
+        });
+      }).catch(function () {
+        // Fallback if boundary layer fails
+        setStatus("Ready");
+      });
+
       setupWidgets();
       updateCount();
 
