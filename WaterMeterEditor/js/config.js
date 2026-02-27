@@ -16,25 +16,27 @@ var APP_CONFIG = {
   // -- OAuth 2.0 (redirect-based, no popup) --
   OAUTH_APP_ID: "DhZk7VoirUPP4Sa2",
 
-  // -- Data Source --
-  // Water Meters - Operational Edit View (Utilities - Internal)
-  LAYER_ITEM_ID: "d3f51dc1392f483abfa74eec072f972d",
-  LAYER_ID: 1,
+  // -- Data Sources --
+
+  // Water Meters + Service Lines (Operational Edit View - Internal)
+  // Meters = Layer 1, Service Lines = Layer 5
+  EDIT_VIEW_ITEM_ID: "d3f51dc1392f483abfa74eec072f972d",
+  METER_LAYER_ID: 1,
+  SERVICE_LINE_LAYER_ID: 5,
+
+  // Water Main Distribution (Public View - visualization only)
+  WATER_MAIN_ITEM_ID: "add610c5a4694af1b34bd2c9cf4af56d",
 
   // -- Search Configuration --
-  SEARCH_FIELDS: ["MeterNo", "AccntNo", "FlexNetNo", "AccntAddress", "AccntName"],
+  METER_SEARCH_FIELDS: ["MeterNo", "AccntNo", "FlexNetNo", "AccntAddress", "AccntName"],
+  SERVICE_LINE_SEARCH_FIELDS: ["RefName", "Material", "Pipe_Size"],
 
-  // -- Field Configuration --
-  EDIT_FIELDS: [
-    "MeterNo", "AccntNo", "FlexNetNo", "ServiceType",
-    "AccntName", "AccntAddress", "Mod_Acc",
-    "InstallDate", "MeterInstallDate"
-  ],
+  // -- Soft Delete --
+  // Service Lines: Field_Verified = "Removed" hides the feature
+  // Meters: delete disabled (no suitable status field on view)
+  SOFT_DELETE_FIELD: "Field_Verified",
+  SOFT_DELETE_VALUE: "Removed",
 
   // -- Map Defaults --
-  MAP_BASEMAP: "gray-vector",
-
-  // -- UI --
-  SELECTION_HIGHLIGHT_COLOR: [0, 200, 255, 0.4],
-  SELECTION_OUTLINE_COLOR: [0, 200, 255, 1]
+  MAP_BASEMAP: "gray-vector"
 };
