@@ -469,8 +469,7 @@ require([
         enabled: true,
         featureSources: [
           { layer: meterLayer, enabled: true },
-          { layer: serviceLineLayer, enabled: true },
-          { layer: waterMainLayer, enabled: true }
+          { layer: serviceLineLayer, enabled: true }
         ]
       },
       layerInfos: [
