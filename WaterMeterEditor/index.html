@@ -49,8 +49,12 @@
 
       <!-- Search -->
       <div class="sidebar-search">
-        <div class="sidebar-search-label">Find a Meter</div>
-        <div id="searchContainer"></div>
+        <div class="sidebar-search-label">Find a Meter or Service Line</div>
+        <div class="search-wrap">
+          <input id="searchInput" type="text" class="search-input" placeholder="Account #, Meter #, Address, Zone..." autocomplete="off" />
+          <button id="searchClear" class="search-clear" title="Clear">&times;</button>
+          <div id="searchResults" class="search-results"></div>
+        </div>
       </div>
 
       <!-- Editor -->
