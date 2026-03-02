@@ -50,13 +50,8 @@ require([
   }
 
   function updateCount() {
-    var mCount = 0, slCount = 0;
-    meterLayer.queryFeatureCount().then(function (c) {
-      mCount = c;
-      return serviceLineLayer.queryFeatureCount();
-    }).then(function (c) {
-      slCount = c;
-      countEl.textContent = mCount.toLocaleString() + " meters | " + slCount.toLocaleString() + " service connections";
+    meterLayer.queryFeatureCount().then(function (count) {
+      countEl.textContent = count.toLocaleString() + " meters";
     }).catch(function () {
       countEl.textContent = "-";
     });
@@ -397,6 +392,7 @@ require([
       },
       center: [-98.69, 29.74],
       zoom: 14,
+      ui: { components: ["attribution"] },
       popup: {
         dockEnabled: true,
         dockOptions: { position: "bottom-right", breakpoint: false }
@@ -424,7 +420,10 @@ require([
   // ================================================================
   function setupWidgets() {
 
-    // Search - across meters and service lines
+    // Remove any default zoom that may persist from the theme
+    view.ui.remove("zoom");
+
+    // Search - across meters and service connections
     new Search({
       view: view,
       container: "searchContainer",
@@ -461,7 +460,7 @@ require([
       ]
     });
 
-    // Editor - meters and service lines only (not water mains)
+    // Editor - meters and service connections only
     editor = new Editor({
       view: view,
       container: editorPanel,
@@ -478,7 +477,7 @@ require([
           formTemplate: meterFormTemplate(),
           addEnabled: true,
           updateEnabled: true,
-          deleteEnabled: false,   // No delete - no suitable status field for soft delete
+          deleteEnabled: false,
           attachmentsOnCreateEnabled: true,
           attachmentsOnUpdateEnabled: true
         },
@@ -487,7 +486,7 @@ require([
           formTemplate: serviceLineFormTemplate(),
           addEnabled: true,
           updateEnabled: true,
-          deleteEnabled: false,   // No delete - use "Retire" soft delete instead
+          deleteEnabled: false,
           attachmentsOnCreateEnabled: true,
           attachmentsOnUpdateEnabled: true
         }
@@ -502,7 +501,7 @@ require([
       }
     );
 
-    // Zoom
+    // Zoom (bottom-right only)
     view.ui.add(new Zoom({ view: view }), "bottom-right");
 
     // Basemap Toggle
@@ -514,11 +513,25 @@ require([
     // Locate
     view.ui.add(new Locate({ view: view }), "bottom-right");
 
-    // Layer List
-    view.ui.add(new LayerList({
-      view: view,
-      container: document.createElement("div")
-    }), "top-right");
+    // Layer List (visibility toggles)
+    view.ui.add(new LayerList({ view: view }), "top-right");
+
+    // Zoom-to-layer buttons
+    document.getElementById("zoomMeters").addEventListener("click", function () {
+      meterLayer.queryExtent().then(function (result) {
+        if (result && result.extent) view.goTo(result.extent.expand(1.2));
+      });
+    });
+    document.getElementById("zoomServiceLines").addEventListener("click", function () {
+      serviceLineLayer.queryExtent().then(function (result) {
+        if (result && result.extent) view.goTo(result.extent.expand(1.2));
+      });
+    });
+    document.getElementById("zoomMains").addEventListener("click", function () {
+      waterMainLayer.queryExtent().then(function (result) {
+        if (result && result.extent) view.goTo(result.extent.expand(1.2));
+      });
+    });
   }
 
 
@@ -584,6 +597,41 @@ require([
       serviceLineLayer.title = "Service Connections";
       waterMainLayer.title = "Distribution Mains";
 
+      // Override service-defined template names (e.g. "Meter_Points_Zone1")
+      // Must clear templates, types, AND sourceJSON to prevent Editor widget from reading old names
+      var meterTemplate = {
+        name: "Meter",
+        description: "",
+        drawingTool: "esriFeatureEditToolPoint",
+        prototype: { attributes: {} }
+      };
+      meterLayer.templates = [meterTemplate];
+      if (meterLayer.types) meterLayer.types = [];
+      if (meterLayer.sourceJSON) {
+        meterLayer.sourceJSON.templates = [meterTemplate];
+        meterLayer.sourceJSON.types = [];
+        meterLayer.sourceJSON.name = "Meters";
+      }
+
+      var serviceTemplate = {
+        name: "Service Connection",
+        description: "",
+        drawingTool: "esriFeatureEditToolLine",
+        prototype: { attributes: {} }
+      };
+      serviceLineLayer.templates = [serviceTemplate];
+      if (serviceLineLayer.types) serviceLineLayer.types = [];
+      if (serviceLineLayer.sourceJSON) {
+        serviceLineLayer.sourceJSON.templates = [serviceTemplate];
+        serviceLineLayer.sourceJSON.types = [];
+        serviceLineLayer.sourceJSON.name = "Service Connections";
+      }
+
+      // Visibility scale — meters and service connections at 1:5,000
+      meterLayer.minScale = 5000;
+      serviceLineLayer.minScale = 5000;
+      waterMainLayer.minScale = 15000;
+
       setStatus("Loading map...");
       await initMap();
 
@@ -592,7 +640,7 @@ require([
 
       // Refresh counts after edits
       meterLayer.on("edits", function () { updateCount(); setStatus("Edit saved"); });
-      serviceLineLayer.on("edits", function () { updateCount(); setStatus("Edit saved"); });
+      serviceLineLayer.on("edits", function () { setStatus("Edit saved"); });
 
       setStatus("Ready");
 
