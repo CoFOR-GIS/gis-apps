@@ -516,27 +516,21 @@ require([
     // Layer List (visibility toggles)
     view.ui.add(new LayerList({ view: view }), "top-right");
 
-    // Zoom-to-layer buttons — ensure final scale is within layer minScale
-    function zoomToLayer(layer) {
-      layer.queryExtent().then(function (result) {
-        if (result && result.extent) {
-          view.goTo(result.extent.expand(1.2)).then(function () {
-            if (layer.minScale && view.scale > layer.minScale) {
-              view.goTo({ center: view.center, scale: layer.minScale * 0.9 });
-            }
-          });
-        }
-      });
-    }
-
+    // Zoom-to-layer buttons
     document.getElementById("zoomMeters").addEventListener("click", function () {
-      zoomToLayer(meterLayer);
+      meterLayer.queryExtent().then(function (result) {
+        if (result && result.extent) view.goTo(result.extent.expand(1.2));
+      });
     });
     document.getElementById("zoomServiceLines").addEventListener("click", function () {
-      zoomToLayer(serviceLineLayer);
+      serviceLineLayer.queryExtent().then(function (result) {
+        if (result && result.extent) view.goTo(result.extent.expand(1.2));
+      });
     });
     document.getElementById("zoomMains").addEventListener("click", function () {
-      zoomToLayer(waterMainLayer);
+      waterMainLayer.queryExtent().then(function (result) {
+        if (result && result.extent) view.goTo(result.extent.expand(1.2));
+      });
     });
   }
 
