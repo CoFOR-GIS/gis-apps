@@ -3,133 +3,185 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Water Distribution Editor — City of Fair Oaks Ranch</title>
+  <title>Parcel Exemption Editor — City of Fair Oaks Ranch</title>
 
   <!-- ArcGIS Maps SDK for JavaScript 4.31 -->
-  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css" />
   <script src="https://js.arcgis.com/4.31/"></script>
 
   <!-- Application Styles -->
   <link rel="stylesheet" href="css/styles.css" />
 
-  <!-- Favicon — Fair Oaks Ranch seal -->
-  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
 </head>
 <body>
+  <div class="app-layout">
 
-<div class="app-shell">
+    <!-- ═══════════════════════════════════════════════════════════
+         LEFT SIDEBAR
+         ═══════════════════════════════════════════════════════════ -->
+    <aside class="sidebar">
 
-  <!-- ── Header ────────────────────────────────────────────── -->
-  <header class="app-header">
-    <div class="header-brand">
-      <!-- FOR Seal -->
-      <img class="header-logo" src="logo.svg" alt="City of Fair Oaks Ranch" />
-      <div class="header-titles">
-        <div class="header-title">Water Distribution Editor</div>
-        <div class="header-subtitle">City of Fair Oaks Ranch — Utilities</div>
-      </div>
-    </div>
-
-    <div class="header-spacer"></div>
-
-    <div class="header-user">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-      <span id="userName" class="user-name">—</span>
-    </div>
-  </header>
-
-  <!-- ── Body ──────────────────────────────────────────────── -->
-  <div class="app-body">
-
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar">
-
-      <!-- Search -->
-      <div class="sidebar-search">
-        <div class="sidebar-search-label">Find a Meter</div>
-        <div id="searchContainer"></div>
+      <!-- Header -->
+      <div class="app-header">
+        <div class="app-title">
+          <img src="logo.svg" alt="" style="width:28px;height:28px;object-fit:contain;border-radius:3px;margin-right:8px;vertical-align:middle;" />
+          Parcel Exemptions 
+        </div>
+        <div class="header-right">
+          <span class="user-label" id="user-label">…</span>
+          <button class="btn-sign-out" id="btn-sign-out">Sign out</button>
+        </div>
       </div>
 
-      <!-- Editor -->
-      <div class="sidebar-editor">
+      <!-- Scrollable Body -->
+      <div class="sidebar-body">
 
-        <!-- Welcome / idle state -->
-        <div id="welcomePanel" class="welcome-panel">
-          <div class="welcome-icon">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 2 C9 7, 5 12, 5 16 C5 19.9 8.1 23 12 23 C15.9 23 19 19.9 19 16 C19 12 15 7 12 2Z"/>
-              <circle cx="12" cy="16" r="3"/>
-            </svg>
+        <!-- ── Selection Tools ──────────────────────────────── -->
+        <div class="section">
+          <div class="section-label">Selection Tools</div>
+          <div class="mode-buttons">
+            <button class="btn-mode" id="btn-mode-spatial">
+              <span class="mode-icon">⬡</span> Spatial
+            </button>
+            <button class="btn-mode" id="btn-mode-filter">
+              <span class="mode-icon">☰</span> Filter
+            </button>
+            <button class="btn-mode" id="btn-mode-search">
+              <span class="mode-icon">⌕</span> Search
+            </button>
           </div>
-          <div class="welcome-heading">Water Distribution Editor</div>
-          <div class="welcome-body">
-            Search for a meter or service line above, or click features on the map to begin editing.
-            Water mains are shown for reference only.
+        </div>
+
+        <!-- ── Spatial Selection Panel ──────────────────────── -->
+        <div class="tool-panel" id="panel-spatial">
+          <div class="tool-panel-label">Draw to Select Parcels</div>
+          <div class="tool-row">
+            <button class="btn btn-secondary btn-full" id="btn-lasso">
+              ⬡ Lasso (Polygon)
+            </button>
+            <button class="btn btn-secondary btn-full" id="btn-rectangle">
+              ▭ Rectangle
+            </button>
+          </div>
+          <div class="tool-row">
+            <button class="btn btn-ghost btn-full" id="btn-cancel-sketch">Cancel drawing</button>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+            Parcels intersecting your shape will be added to the selection. You can also click individual parcels on the map.
+          </div>
+        </div>
+
+        <!-- ── Attribute Filter Panel ───────────────────────── -->
+        <div class="tool-panel" id="panel-filter">
+          <div class="tool-panel-label">Select by Attributes</div>
+          <div class="form-row">
+            <label class="form-label">Subdivision</label>
+            <select id="select-subdivision">
+              <option value="">Loading…</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Current Land Use</label>
+            <select id="select-landuse-filter">
+              <option value="">Loading…</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <button class="btn btn-primary btn-full" id="btn-apply-filter">
+              Add matching parcels to selection
+            </button>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+            Tip: Select a subdivision + "As is" to find all unclassified parcels in that area.
+          </div>
+        </div>
+
+        <!-- ── Search Panel ─────────────────────────────────── -->
+        <div class="tool-panel" id="panel-search">
+          <div class="tool-panel-label">Search &amp; Add Individual Parcels</div>
+          <div class="form-row">
+            <div class="input-group">
+              <input type="text" id="search-input"
+                     placeholder="Address, Prop ID, or Subdivision…" />
+              <button class="btn btn-primary" id="btn-search-go">Search</button>
+            </div>
+          </div>
+          <div class="search-results" id="search-results"></div>
+        </div>
+
+        <!-- ── Selection Summary + List ─────────────────────── -->
+        <div class="section">
+          <div class="section-label">Current Selection</div>
+          <div class="selection-summary">
+            <div class="stat">
+              <span class="stat-value" id="selection-count">0</span>
+              <span class="stat-label">Parcels</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="selection-acreage">0</span>
+              <span class="stat-label">Acres</span>
+            </div>
+            <div style="margin-left: auto; align-self: center;">
+              <button class="btn btn-ghost" id="btn-clear-selection">Clear all</button>
+            </div>
           </div>
 
-          <div class="welcome-workflows">
-            <div class="wf-item">
-              <div class="wf-badge new">+</div>
-              <div class="wf-text">
-                <strong>New Service Activation</strong>
-                <span>Place a new meter point. Fill in Account, Meter No., FlexNet, and Install Date.</span>
-              </div>
-            </div>
-            <div class="wf-item">
-              <div class="wf-badge changeout">&#8635;</div>
-              <div class="wf-text">
-                <strong>Meter Change-Out</strong>
-                <span>Select meter, update Meter No. and Meter Install Date. Attach change-out docs.</span>
-              </div>
-            </div>
-            <div class="wf-item">
-              <div class="wf-badge new">+</div>
-              <div class="wf-text">
-                <strong>New Service Line</strong>
-                <span>Draw a new service line. Enter pipe size, material, pressure zone.</span>
-              </div>
-            </div>
-            <div class="wf-item">
-              <div class="wf-badge terminate">&times;</div>
-              <div class="wf-text">
-                <strong>Retire Service Line</strong>
-                <span>Click a service line, then use the "Retire" button in the popup. The feature is hidden, not deleted. An admin can restore it.</span>
-              </div>
+          <div class="selection-list-container" id="selection-list">
+            <div class="selection-empty">
+              No parcels selected.<br />Use the tools above to select parcels.
             </div>
           </div>
         </div>
 
-        <div id="editorContainer"></div>
-      </div>
+        <!-- ── Batch Edit ───────────────────────────────────── -->
+        <div class="section">
+          <div class="section-label">Apply Edit</div>
+          <div class="edit-panel">
+            <div class="form-row">
+              <label class="form-label">Set Land Use classification for selected parcels</label>
+              <select id="select-landuse-edit">
+                <option value="" disabled selected>Loading…</option>
+              </select>
+            </div>
+            <div class="edit-actions">
+              <button class="btn btn-primary" id="btn-apply-edit" disabled>
+                Apply to selection
+              </button>
+              <button class="btn btn-danger" id="btn-undo" disabled>
+                ↩ Undo last
+              </button>
+            </div>
+            <div class="progress-bar" id="progress-bar">
+              <div class="progress-track">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+              <div class="progress-label" id="progress-label"></div>
+            </div>
+          </div>
+        </div>
 
+      </div><!-- /sidebar-body -->
     </aside>
 
-    <!-- Map -->
-    <div class="main-area">
-      <button id="sidebarToggle" class="sidebar-toggle" title="Toggle sidebar">✕</button>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAP AREA
+         ═══════════════════════════════════════════════════════════ -->
+    <main class="main-area">
       <div id="viewDiv"></div>
-    </div>
+      <div class="status-bar">
+        <span id="status-message">Loading…</span>
+      </div>
+    </main>
 
   </div>
 
-  <!-- ── Status Bar ────────────────────────────────────────── -->
-  <footer class="status-bar">
-    <div class="status-left">
-      <span><span class="status-dot"></span><span id="statusText">Initializing…</span></span>
-      <span class="status-count" id="featureCount">—</span>
-    </div>
-    <span>NAD83 TX S Central (2278) · Operational Edit View</span>
-  </footer>
+  <!-- Configuration (must load before app.js) -->
+  <script src="js/config.js"></script>
 
-</div>
-
-<!-- Configuration -->
-<script src="js/config.js"></script>
-<!-- Application -->
-<script src="js/app.js"></script>
-
+  <!-- Main Application -->
+  <script src="js/app.js"></script>
 </body>
 </html>
