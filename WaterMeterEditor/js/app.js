@@ -441,8 +441,49 @@ require([
           suggestionTemplate: "{AccntAddress} - Meter {MeterNo}",
           suggestionsEnabled: true,
           minSuggestCharacters: 2,
-          maxSuggestions: 8,
-          zoomScale: 2000
+          maxSuggestions: 12,
+          zoomScale: 2000,
+          getResults: function (params) {
+            var term = params.suggestResult ? params.suggestResult.text : params.searchTerm;
+            if (!term) return [];
+            var where = cfg.METER_SEARCH_FIELDS.map(function (f) {
+              return f + " LIKE '%" + term.replace(/'/g, "''") + "%'";
+            }).join(" OR ");
+            return meterLayer.queryFeatures({
+              where: where,
+              outFields: ["*"],
+              returnGeometry: true,
+              num: 20
+            }).then(function (result) {
+              return result.features.map(function (feat) {
+                return {
+                  extent: feat.geometry.extent || null,
+                  feature: feat,
+                  name: (feat.attributes.AccntAddress || "") + " - Meter " + (feat.attributes.MeterNo || "")
+                };
+              });
+            });
+          },
+          getSuggestions: function (params) {
+            var term = params.searchTerm;
+            if (!term || term.length < 2) return [];
+            var where = cfg.METER_SEARCH_FIELDS.map(function (f) {
+              return f + " LIKE '%" + term.replace(/'/g, "''") + "%'";
+            }).join(" OR ");
+            return meterLayer.queryFeatures({
+              where: where,
+              outFields: ["AccntAddress", "MeterNo", "AccntNo", "AccntName"],
+              returnGeometry: false,
+              num: 12
+            }).then(function (result) {
+              return result.features.map(function (feat) {
+                return {
+                  text: (feat.attributes.AccntAddress || "") + " - Meter " + (feat.attributes.MeterNo || ""),
+                  key: feat.attributes.MeterNo
+                };
+              });
+            });
+          }
         },
         {
           layer: serviceLineLayer,
@@ -454,8 +495,49 @@ require([
           placeholder: "Zone, Material, Pipe Size...",
           suggestionsEnabled: true,
           minSuggestCharacters: 2,
-          maxSuggestions: 6,
-          zoomScale: 2000
+          maxSuggestions: 8,
+          zoomScale: 2000,
+          getResults: function (params) {
+            var term = params.suggestResult ? params.suggestResult.text : params.searchTerm;
+            if (!term) return [];
+            var where = cfg.SERVICE_LINE_SEARCH_FIELDS.map(function (f) {
+              return f + " LIKE '%" + term.replace(/'/g, "''") + "%'";
+            }).join(" OR ");
+            return serviceLineLayer.queryFeatures({
+              where: where,
+              outFields: ["*"],
+              returnGeometry: true,
+              num: 20
+            }).then(function (result) {
+              return result.features.map(function (feat) {
+                return {
+                  extent: feat.geometry.extent || null,
+                  feature: feat,
+                  name: (feat.attributes.RefName || "") + " - " + (feat.attributes.Material || "")
+                };
+              });
+            });
+          },
+          getSuggestions: function (params) {
+            var term = params.searchTerm;
+            if (!term || term.length < 2) return [];
+            var where = cfg.SERVICE_LINE_SEARCH_FIELDS.map(function (f) {
+              return f + " LIKE '%" + term.replace(/'/g, "''") + "%'";
+            }).join(" OR ");
+            return serviceLineLayer.queryFeatures({
+              where: where,
+              outFields: ["RefName", "Material", "Pipe_Size"],
+              returnGeometry: false,
+              num: 8
+            }).then(function (result) {
+              return result.features.map(function (feat) {
+                return {
+                  text: (feat.attributes.RefName || "") + " - " + (feat.attributes.Material || ""),
+                  key: feat.attributes.RefName
+                };
+              });
+            });
+          }
         }
       ]
     });
@@ -515,23 +597,6 @@ require([
 
     // Layer List (visibility toggles)
     view.ui.add(new LayerList({ view: view }), "top-right");
-
-    // Zoom-to-layer buttons
-    document.getElementById("zoomMeters").addEventListener("click", function () {
-      meterLayer.queryExtent().then(function (result) {
-        if (result && result.extent) view.goTo(result.extent.expand(1.2));
-      });
-    });
-    document.getElementById("zoomServiceLines").addEventListener("click", function () {
-      serviceLineLayer.queryExtent().then(function (result) {
-        if (result && result.extent) view.goTo(result.extent.expand(1.2));
-      });
-    });
-    document.getElementById("zoomMains").addEventListener("click", function () {
-      waterMainLayer.queryExtent().then(function (result) {
-        if (result && result.extent) view.goTo(result.extent.expand(1.2));
-      });
-    });
   }
 
 
