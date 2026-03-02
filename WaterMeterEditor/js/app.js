@@ -13,7 +13,6 @@ require([
   "esri/identity/IdentityManager",
   "esri/views/MapView",
   "esri/layers/FeatureLayer",
-  "esri/widgets/Search",
   "esri/widgets/Editor",
   "esri/widgets/Zoom",
   "esri/widgets/BasemapToggle",
@@ -24,7 +23,7 @@ require([
   "esri/core/reactiveUtils"
 ], function (
   Portal, OAuthInfo, IdentityManager,
-  MapView, FeatureLayer, Search, Editor,
+  MapView, FeatureLayer, Editor,
   Zoom, BasemapToggle, Locate, Legend, LayerList,
   CustomContent, reactiveUtils
 ) {
@@ -423,124 +422,157 @@ require([
     // Remove any default zoom that may persist from the theme
     view.ui.remove("zoom");
 
-    // Search - across meters and service connections
-    new Search({
-      view: view,
-      container: "searchContainer",
-      includeDefaultSources: false,
-      allPlaceholder: "Search meters, service connections...",
-      sources: [
-        {
-          layer: meterLayer,
-          searchFields: cfg.METER_SEARCH_FIELDS,
-          displayField: "AccntAddress",
-          exactMatch: false,
+
+    // Custom Search — LIKE '%term%' contains matching
+    var searchInput = document.getElementById("searchInput");
+    var searchResults = document.getElementById("searchResults");
+    var searchClear = document.getElementById("searchClear");
+    var searchTimer = null;
+
+    function buildWhere(fields, term) {
+      var escaped = term.replace(/'/g, "''");
+      return fields.map(function (f) {
+        return f + " LIKE '%" + escaped + "%'";
+      }).join(" OR ");
+    }
+
+    function doSearch(term) {
+      if (!term || term.length < 2) {
+        searchResults.classList.remove("open");
+        return;
+      }
+
+      searchResults.innerHTML = '<div class="search-loading">Searching...</div>';
+      searchResults.classList.add("open");
+
+      var meterWhere = buildWhere(cfg.METER_SEARCH_FIELDS, term);
+      var slWhere = buildWhere(cfg.SERVICE_LINE_SEARCH_FIELDS, term);
+
+      Promise.all([
+        meterLayer.queryFeatures({
+          where: meterWhere,
           outFields: ["*"],
-          name: "Meters",
-          placeholder: "Account #, Meter #, FlexNet #, Address...",
-          suggestionTemplate: "{AccntAddress} - Meter {MeterNo}",
-          suggestionsEnabled: true,
-          minSuggestCharacters: 2,
-          maxSuggestions: 12,
-          zoomScale: 2000,
-          getResults: function (params) {
-            var term = params.suggestResult ? params.suggestResult.text : params.searchTerm;
-            if (!term) return [];
-            var where = cfg.METER_SEARCH_FIELDS.map(function (f) {
-              return f + " LIKE '%" + term.replace(/'/g, "''") + "%'";
-            }).join(" OR ");
-            return meterLayer.queryFeatures({
-              where: where,
-              outFields: ["*"],
-              returnGeometry: true,
-              num: 20
-            }).then(function (result) {
-              return result.features.map(function (feat) {
-                return {
-                  extent: feat.geometry.extent || null,
-                  feature: feat,
-                  name: (feat.attributes.AccntAddress || "") + " - Meter " + (feat.attributes.MeterNo || "")
-                };
-              });
-            });
-          },
-          getSuggestions: function (params) {
-            var term = params.searchTerm;
-            if (!term || term.length < 2) return [];
-            var where = cfg.METER_SEARCH_FIELDS.map(function (f) {
-              return f + " LIKE '%" + term.replace(/'/g, "''") + "%'";
-            }).join(" OR ");
-            return meterLayer.queryFeatures({
-              where: where,
-              outFields: ["AccntAddress", "MeterNo", "AccntNo", "AccntName"],
-              returnGeometry: false,
-              num: 12
-            }).then(function (result) {
-              return result.features.map(function (feat) {
-                return {
-                  text: (feat.attributes.AccntAddress || "") + " - Meter " + (feat.attributes.MeterNo || ""),
-                  key: feat.attributes.MeterNo
-                };
-              });
-            });
-          }
-        },
-        {
-          layer: serviceLineLayer,
-          searchFields: cfg.SERVICE_LINE_SEARCH_FIELDS,
-          displayField: "RefName",
-          exactMatch: false,
+          returnGeometry: true,
+          num: 10
+        }),
+        serviceLineLayer.queryFeatures({
+          where: slWhere,
           outFields: ["*"],
-          name: "Service Connections",
-          placeholder: "Zone, Material, Pipe Size...",
-          suggestionsEnabled: true,
-          minSuggestCharacters: 2,
-          maxSuggestions: 8,
-          zoomScale: 2000,
-          getResults: function (params) {
-            var term = params.suggestResult ? params.suggestResult.text : params.searchTerm;
-            if (!term) return [];
-            var where = cfg.SERVICE_LINE_SEARCH_FIELDS.map(function (f) {
-              return f + " LIKE '%" + term.replace(/'/g, "''") + "%'";
-            }).join(" OR ");
-            return serviceLineLayer.queryFeatures({
-              where: where,
-              outFields: ["*"],
-              returnGeometry: true,
-              num: 20
-            }).then(function (result) {
-              return result.features.map(function (feat) {
-                return {
-                  extent: feat.geometry.extent || null,
-                  feature: feat,
-                  name: (feat.attributes.RefName || "") + " - " + (feat.attributes.Material || "")
-                };
-              });
-            });
-          },
-          getSuggestions: function (params) {
-            var term = params.searchTerm;
-            if (!term || term.length < 2) return [];
-            var where = cfg.SERVICE_LINE_SEARCH_FIELDS.map(function (f) {
-              return f + " LIKE '%" + term.replace(/'/g, "''") + "%'";
-            }).join(" OR ");
-            return serviceLineLayer.queryFeatures({
-              where: where,
-              outFields: ["RefName", "Material", "Pipe_Size"],
-              returnGeometry: false,
-              num: 8
-            }).then(function (result) {
-              return result.features.map(function (feat) {
-                return {
-                  text: (feat.attributes.RefName || "") + " - " + (feat.attributes.Material || ""),
-                  key: feat.attributes.RefName
-                };
-              });
-            });
-          }
+          returnGeometry: true,
+          num: 6
+        })
+      ]).then(function (results) {
+        var meters = results[0].features;
+        var lines = results[1].features;
+        var html = "";
+
+        if (meters.length === 0 && lines.length === 0) {
+          html = '<div class="search-empty">No results found</div>';
         }
-      ]
+
+        if (meters.length > 0) {
+          html += '<div class="search-group-label">Meters (' + meters.length + ')</div>';
+          meters.forEach(function (feat, i) {
+            var a = feat.attributes;
+            html += '<div class="search-item" data-type="meter" data-idx="' + i + '">';
+            html += '<div>' + (a.AccntAddress || "No Address") + '</div>';
+            html += '<div class="search-item-sub">Meter ' + plainNum(a.MeterNo) + ' | Acct ' + (a.AccntNo || "N/A") + '</div>';
+            html += '</div>';
+          });
+        }
+
+        if (lines.length > 0) {
+          html += '<div class="search-group-label">Service Connections (' + lines.length + ')</div>';
+          lines.forEach(function (feat, i) {
+            var a = feat.attributes;
+            html += '<div class="search-item" data-type="service" data-idx="' + i + '">';
+            html += '<div>' + (a.RefName || "Unknown Zone") + ' - ' + (a.Material || "Unknown") + '</div>';
+            html += '<div class="search-item-sub">' + fmtPipeSize(a.Pipe_Size) + ' | ' + (a.Linetype || "") + '</div>';
+            html += '</div>';
+          });
+        }
+
+        searchResults.innerHTML = html;
+
+        // Store features for click handling
+        searchResults._meterFeats = meters;
+        searchResults._serviceFeats = lines;
+
+      }).catch(function (err) {
+        console.error("Search error:", err);
+        searchResults.innerHTML = '<div class="search-empty">Search error</div>';
+      });
+    }
+
+    // Debounced input
+    searchInput.addEventListener("input", function () {
+      clearTimeout(searchTimer);
+      var val = searchInput.value.trim();
+      searchClear.classList.toggle("visible", val.length > 0);
+      searchTimer = setTimeout(function () { doSearch(val); }, 300);
     });
+
+    // Clear button
+    searchClear.addEventListener("click", function () {
+      searchInput.value = "";
+      searchClear.classList.remove("visible");
+      searchResults.classList.remove("open");
+      view.closePopup();
+    });
+
+    // Click a result — zoom and open popup
+    searchResults.addEventListener("click", function (e) {
+      var item = e.target.closest(".search-item");
+      if (!item) return;
+
+      var type = item.getAttribute("data-type");
+      var idx = parseInt(item.getAttribute("data-idx"));
+      var feat, layer;
+
+      if (type === "meter") {
+        feat = searchResults._meterFeats[idx];
+        layer = meterLayer;
+      } else if (type === "service") {
+        feat = searchResults._serviceFeats[idx];
+        layer = serviceLineLayer;
+      }
+
+      if (!feat) return;
+
+      searchResults.classList.remove("open");
+
+      var geom = feat.geometry;
+      var target;
+      if (geom.type === "point") {
+        target = { center: geom, scale: 2000 };
+      } else if (geom.extent) {
+        target = geom.extent.expand(2);
+      } else {
+        target = geom;
+      }
+
+      view.goTo(target).then(function () {
+        view.openPopup({
+          features: [feat],
+          location: geom.type === "point" ? geom : geom.extent.center
+        });
+      });
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest(".search-wrap")) {
+        searchResults.classList.remove("open");
+      }
+    });
+
+    // Re-open on focus if has value
+    searchInput.addEventListener("focus", function () {
+      if (searchInput.value.trim().length >= 2 && searchResults.innerHTML) {
+        searchResults.classList.add("open");
+      }
+    });
+
 
     // Editor - meters and service connections only
     editor = new Editor({
