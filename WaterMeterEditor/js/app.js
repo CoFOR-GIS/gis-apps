@@ -2,10 +2,11 @@
  * City of Fair Oaks Ranch - Water Meter Editor
  * Main Application
  *
- * Three layers:
- *   1. Water Mains (public view, visualization only)
- *   2. Service Lines (editable, soft delete via Field_Verified)
- *   3. Water Meters (editable, delete disabled)
+ * Four layers:
+ *   1. Parcels (public view, visualization only — light grey lot lines)
+ *   2. Water Mains (public view, visualization only)
+ *   3. Service Lines (editable, soft delete via Field_Verified)
+ *   4. Water Meters (editable, delete disabled)
  */
 require([
   "esri/portal/Portal",
@@ -31,7 +32,7 @@ require([
   var cfg = APP_CONFIG;
 
   // -- State --
-  var view, meterLayer, serviceLineLayer, waterMainLayer, editor;
+  var view, meterLayer, serviceLineLayer, waterMainLayer, parcelLayer, editor;
 
   // -- DOM --
   var statusEl     = document.getElementById("statusText");
@@ -387,7 +388,7 @@ require([
       container: "viewDiv",
       map: {
         basemap: cfg.MAP_BASEMAP,
-        layers: [boundaryLayer, waterMainLayer, serviceLineLayer, meterLayer]
+        layers: [boundaryLayer, parcelLayer, waterMainLayer, serviceLineLayer, meterLayer]
       },
       center: [-98.69, 29.74],
       zoom: 14,
@@ -574,7 +575,7 @@ require([
     });
 
 
-    // Editor - meters and service connections only
+    // Editor - meters and service connections only (parcels excluded)
     editor = new Editor({
       view: view,
       container: editorPanel,
@@ -676,12 +677,35 @@ require([
         opacity: 0.7
       });
 
+      // Parcels (public view, visual reference only — lot lines)
+      parcelLayer = new FeatureLayer({
+        portalItem: { id: "bd5079b30310433998c6a54652074dd6" },
+        layerId: 0,
+        title: "Property Boundaries",
+        editingEnabled: false,
+        popupEnabled: false,
+        listMode: "show",
+        opacity: 0.5,
+        renderer: {
+          type: "simple",
+          symbol: {
+            type: "simple-fill",
+            color: [0, 0, 0, 0],
+            outline: {
+              color: [180, 180, 180, 0.6],
+              width: 0.75
+            }
+          }
+        }
+      });
+
       // Load all layers
       try {
         await Promise.all([
           meterLayer.load(),
           serviceLineLayer.load(),
-          waterMainLayer.load()
+          waterMainLayer.load(),
+          parcelLayer.load()
         ]);
       } catch (layerErr) {
         setStatus("Layer failed: " + layerErr.message, true);
@@ -693,6 +717,7 @@ require([
       meterLayer.title = "Meters";
       serviceLineLayer.title = "Service Connections";
       waterMainLayer.title = "Distribution Mains";
+      parcelLayer.title = "Property Boundaries";
 
       // Override service-defined template names (e.g. "Meter_Points_Zone1")
       // Must clear templates, types, AND sourceJSON to prevent Editor widget from reading old names
@@ -728,6 +753,7 @@ require([
       meterLayer.minScale = 5000;
       serviceLineLayer.minScale = 5000;
       waterMainLayer.minScale = 15000;
+      parcelLayer.minScale = 10000;
 
       setStatus("Loading map...");
       await initMap();
