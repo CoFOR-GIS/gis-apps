@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Schema Extractor | CoFOR GIS Admin</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Manrope:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg-primary:#FAF6EE;--bg-secondary:#F2EDE3;--bg-surface:#FFFFFF;--bg-surface-alt:#F7F4EC;--bg-inset:#EDE8DD;
+--text-primary:#192737;--text-secondary:#4A5568;--text-muted:#8B8680;--text-inverse:#FAF6EE;
+--accent-primary:#8D956C;--accent-primary-hover:#7A8360;--accent-primary-dim:rgba(141,149,108,0.12);
+--accent-secondary:#192737;--accent-gold:#C8A94E;--accent-gold-dim:rgba(200,169,78,0.10);
+--accent-blue:#4A7C90;--accent-blue-dim:rgba(74,124,144,0.08);
+--border:rgba(25,39,55,0.10);--border-focus:rgba(141,149,108,0.5);--border-strong:rgba(25,39,55,0.18);
+--status-success:#3D7A4A;--status-success-dim:rgba(61,122,74,0.08);
+--status-error:#A64850;--status-error-dim:rgba(166,72,80,0.08);
+--status-info:#4A7C90;--status-info-dim:rgba(74,124,144,0.08);
+--shadow-sm:0 1px 2px rgba(25,39,55,0.05);--shadow-md:0 4px 12px rgba(25,39,55,0.07);--shadow-lg:0 8px 24px rgba(25,39,55,0.09);
+--radius:6px;--radius-lg:10px;--mono:'JetBrains Mono',monospace
+}
+html{font-size:15px}
+body{font-family:'Manrope',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;line-height:1.55}
+.header{background:var(--bg-surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem;box-shadow:var(--shadow-sm);position:sticky;top:0;z-index:50}
+.header-mark{width:34px;height:34px;background:var(--accent-primary);border-radius:var(--radius);display:grid;place-items:center;color:var(--text-inverse);font-weight:700;font-size:.85rem;font-family:'Bricolage Grotesque',system-ui;flex-shrink:0}
+.header h1{font-family:'Bricolage Grotesque',system-ui;font-weight:700;font-size:1.1rem;color:var(--text-primary);letter-spacing:-.02em}
+.header .subtitle{font-size:.72rem;color:var(--text-muted);margin-top:1px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:.75rem}
+.badge{font-family:var(--mono);font-size:.62rem;color:var(--accent-primary);background:var(--accent-primary-dim);padding:.2rem .55rem;border-radius:3px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.auth-bar{display:flex;align-items:center;gap:.5rem}
+.auth-user{font-size:.75rem;color:var(--text-secondary);font-weight:500}
+.auth-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--accent-primary-dim)}
+.btn-auth{font-family:'Manrope',sans-serif;font-size:.78rem;font-weight:600;background:var(--accent-secondary);color:var(--text-inverse);border:none;border-radius:var(--radius);padding:.45rem 1rem;cursor:pointer;transition:opacity .15s}
+.btn-auth:hover{opacity:.85}
+.btn-auth.sign-out{background:transparent;color:var(--text-muted);border:1px solid var(--border);padding:.35rem .75rem;font-size:.72rem}
+.container{max-width:1200px;margin:0 auto;padding:1.75rem 2rem}
+.panel{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.25rem;box-shadow:var(--shadow-sm)}
+.panel-h{font-family:'Bricolage Grotesque',system-ui;font-size:.78rem;font-weight:700;color:var(--accent-primary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:1rem;display:flex;align-items:center;gap:.4rem}
+label{display:block;font-size:.75rem;font-weight:600;color:var(--text-secondary);margin-bottom:.3rem;letter-spacing:.01em}
+input[type="text"],input[type="password"]{width:100%;background:var(--bg-surface-alt);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem .8rem;font-family:var(--mono);font-size:.82rem;color:var(--text-primary);transition:border-color .2s,box-shadow .2s}
+input:focus{outline:none;border-color:var(--border-focus);box-shadow:0 0 0 3px var(--accent-primary-dim)}
+input::placeholder{color:var(--text-muted);font-family:'Manrope',sans-serif}
+.field-group{margin-bottom:1rem}
+.hint{font-size:.68rem;color:var(--text-muted);margin-top:.25rem;line-height:1.4}
+.row{display:flex;gap:1rem;flex-wrap:wrap}.row>*{flex:1;min-width:0}
+.toggle-row{display:flex;align-items:center;gap:.55rem;margin-top:.5rem}
+.toggle-row input[type="checkbox"]{appearance:none;width:32px;height:17px;background:var(--bg-inset);border:1px solid var(--border-strong);border-radius:9px;position:relative;cursor:pointer;transition:all .2s;flex-shrink:0}
+.toggle-row input[type="checkbox"]::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--text-muted);transition:all .2s}
+.toggle-row input[type="checkbox"]:checked{background:var(--accent-primary-dim);border-color:var(--accent-primary)}
+.toggle-row input[type="checkbox"]:checked::after{left:17px;background:var(--accent-primary)}
+.toggle-row label{margin:0;cursor:pointer;font-size:.75rem;font-weight:500}
+.btn-row{display:flex;gap:.6rem;margin-top:1.25rem;flex-wrap:wrap}
+button{font-family:'Manrope',sans-serif;font-size:.8rem;font-weight:600;border:1px solid transparent;border-radius:var(--radius);padding:.5rem 1.1rem;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:.35rem}
+.btn-primary{background:var(--accent-primary);color:var(--text-inverse)}.btn-primary:hover{background:var(--accent-primary-hover)}.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.btn-outline{background:transparent;border-color:var(--border-strong);color:var(--text-secondary)}.btn-outline:hover{border-color:var(--text-secondary);color:var(--text-primary);background:var(--bg-surface-alt)}.btn-outline:disabled{opacity:.3;cursor:not-allowed}
+.btn-gold{background:var(--accent-gold-dim);border-color:var(--accent-gold);color:#9A7F2E}.btn-gold:hover{background:rgba(200,169,78,.18)}
+.btn-accent{background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue)}.btn-accent:hover{background:rgba(74,124,144,.14)}
+.status-bar{font-size:.75rem;padding:.55rem .9rem;border-radius:var(--radius);margin-bottom:1rem;display:none;align-items:center;gap:.5rem;font-family:var(--mono);font-weight:500}
+.status-bar.info{display:flex;background:var(--status-info-dim);border:1px solid rgba(74,124,144,.2);color:var(--status-info)}
+.status-bar.error{display:flex;background:var(--status-error-dim);border:1px solid rgba(166,72,80,.2);color:var(--status-error)}
+.status-bar.success{display:flex;background:var(--status-success-dim);border:1px solid rgba(61,122,74,.2);color:var(--status-success)}
+.spinner{width:13px;height:13px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.5rem}
+.meta-card{background:var(--bg-surface-alt);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem .85rem}
+.mc-label{font-size:.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem}
+.mc-value{font-family:var(--mono);font-size:.78rem;color:var(--text-primary);word-break:break-all}.mc-value.small{font-size:.72rem;color:var(--text-secondary)}
+.tag{display:inline-block;font-family:var(--mono);font-size:.65rem;padding:.12rem .4rem;border-radius:3px;margin:.1rem;font-weight:600}
+.tag-green{background:rgba(61,122,74,.1);color:var(--status-success)}.tag-gold{background:var(--accent-gold-dim);color:#9A7F2E}.tag-blue{background:var(--accent-blue-dim);color:var(--accent-blue)}.tag-red{background:var(--status-error-dim);color:var(--status-error)}.tag-muted{background:var(--bg-inset);color:var(--text-muted)}
+.section-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;padding:.4rem 0}
+.section-toggle .panel-h{margin:0;cursor:pointer}.section-toggle .arrow{color:var(--text-muted);font-size:.65rem;transition:transform .2s}
+.section-toggle.open .arrow{transform:rotate(90deg)}.section-body{display:none;padding-top:.6rem}.section-body.open{display:block}
+.results-panel{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:none;margin-bottom:1.25rem;box-shadow:var(--shadow-sm)}
+.results-panel.visible{display:block}
+.results-header{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:.5rem}
+.results-header .panel-h{margin:0}
+.field-count{font-family:var(--mono);font-size:.7rem;color:var(--text-muted);background:var(--bg-inset);padding:.2rem .5rem;border-radius:3px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{background:var(--bg-surface-alt);padding:.5rem .75rem;text-align:left;font-weight:700;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);border-bottom:1px solid var(--border-strong);white-space:nowrap;position:sticky;top:0}
+tbody td{padding:.45rem .75rem;border-bottom:1px solid var(--border);vertical-align:top}
+tbody tr:hover{background:var(--accent-primary-dim)}
+.fname{font-family:var(--mono);font-weight:500;color:var(--text-primary);white-space:nowrap}
+.ftype{font-family:var(--mono);font-size:.72rem;color:#9A7F2E;background:var(--accent-gold-dim);padding:.12rem .4rem;border-radius:3px;white-space:nowrap}
+.falias{color:var(--text-secondary)}.flength{font-family:var(--mono);color:var(--text-muted);text-align:center}
+.fnullable,.feditable{text-align:center;font-size:.73rem}
+.fnullable .yes,.feditable .yes{color:var(--status-success)}.fnullable .no,.feditable .no{color:var(--status-error)}
+.fdomain{font-family:var(--mono);font-size:.7rem;color:var(--accent-blue)}.fdefault{font-family:var(--mono);font-size:.7rem;color:var(--text-muted)}
+.system-field{opacity:.4}
+.export-panel{display:none;gap:.6rem;flex-wrap:wrap;align-items:center;padding:.9rem 1.25rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:1.25rem;box-shadow:var(--shadow-sm)}
+.export-panel.visible{display:flex}
+.export-label{font-size:.68rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.export-divider{width:1px;height:22px;background:var(--border-strong);margin:0 .2rem}
+.preview-overlay{position:fixed;inset:0;background:rgba(25,39,55,.4);z-index:100;display:none;place-items:center;backdrop-filter:blur(6px)}
+.preview-overlay.visible{display:grid}
+.preview-box{background:var(--bg-surface);border:1px solid var(--border-strong);border-radius:var(--radius-lg);width:92%;max-width:900px;max-height:85vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.preview-header{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.2rem;border-bottom:1px solid var(--border)}
+.preview-header h3{font-family:'Bricolage Grotesque',system-ui;font-size:.9rem;font-weight:700;color:var(--text-primary)}
+.preview-body{padding:1rem 1.2rem;overflow:auto;flex:1}
+.preview-body pre{font-family:var(--mono);font-size:.74rem;color:var(--text-primary);white-space:pre-wrap;word-break:break-word;line-height:1.6;background:var(--bg-inset);padding:1rem;border-radius:var(--radius)}
+.preview-footer{display:flex;justify-content:flex-end;gap:.6rem;padding:.8rem 1.2rem;border-top:1px solid var(--border)}
+.footer{text-align:center;padding:2rem;font-size:.68rem;color:var(--text-muted)}
+.auth-gate{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;gap:1.5rem}
+.auth-gate-icon{width:64px;height:64px;background:var(--accent-primary-dim);border-radius:16px;display:grid;place-items:center;font-size:1.5rem;color:var(--accent-primary)}
+.auth-gate h2{font-family:'Bricolage Grotesque',system-ui;font-size:1.35rem;font-weight:800;color:var(--text-primary)}
+.auth-gate p{font-size:.85rem;color:var(--text-secondary);max-width:400px;line-height:1.6}
+.btn-sign-in{font-family:'Manrope',sans-serif;font-size:.9rem;font-weight:700;background:var(--accent-secondary);color:var(--text-inverse);border:none;border-radius:var(--radius);padding:.7rem 2rem;cursor:pointer;transition:opacity .15s}
+.btn-sign-in:hover{opacity:.85}
+/* ══════════ TABS ══════════ */
+.tab-bar{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.25rem}
+.tab-btn{font-family:'Manrope',sans-serif;font-size:.78rem;font-weight:600;color:var(--text-muted);background:none;border:none;border-bottom:2px solid transparent;padding:.55rem 1.1rem;margin-bottom:-2px;cursor:pointer;transition:all .15s;letter-spacing:.01em}
+.tab-btn:hover{color:var(--text-secondary)}
+.tab-btn.active{color:var(--accent-primary);border-bottom-color:var(--accent-primary)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ══════════ SEARCH ══════════ */
+.search-row{display:flex;gap:.5rem}
+.search-row input{flex:1}
+.search-row button{flex-shrink:0}
+.search-filters{display:flex;gap:.75rem;margin-top:.75rem;flex-wrap:wrap;align-items:center}
+.search-filters label{margin:0;font-size:.72rem}
+.search-filters select{font-family:'Manrope',sans-serif;font-size:.75rem;background:var(--bg-surface-alt);border:1px solid var(--border);border-radius:var(--radius);padding:.3rem .5rem;color:var(--text-primary);cursor:pointer}
+.search-filters select:focus{outline:none;border-color:var(--border-focus)}
+.search-results{margin-top:1rem;display:flex;flex-direction:column;gap:.5rem;max-height:420px;overflow-y:auto}
+.sr-card{background:var(--bg-surface-alt);border:1px solid var(--border);border-radius:var(--radius);padding:.7rem .9rem;display:flex;align-items:flex-start;gap:.75rem;cursor:pointer;transition:all .15s}
+.sr-card:hover{border-color:var(--accent-primary);background:var(--accent-primary-dim)}
+.sr-thumb{width:48px;height:48px;border-radius:var(--radius);background:var(--bg-inset);flex-shrink:0;object-fit:cover;border:1px solid var(--border)}
+.sr-body{flex:1;min-width:0}
+.sr-title{font-family:'Bricolage Grotesque',system-ui;font-size:.82rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-snippet{font-size:.7rem;color:var(--text-muted);line-height:1.4;margin-top:.15rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sr-meta{display:flex;gap:.75rem;margin-top:.3rem;font-size:.65rem;color:var(--text-muted);flex-wrap:wrap}
+.sr-meta span{display:inline-flex;align-items:center;gap:.2rem}
+.sr-meta .val{color:var(--text-secondary);font-family:var(--mono)}
+.sr-badge{font-family:var(--mono);font-size:.6rem;padding:.1rem .35rem;border-radius:2px;font-weight:600;flex-shrink:0;align-self:center}
+.sr-badge.hosted{background:rgba(61,122,74,.1);color:var(--status-success)}
+.sr-badge.view{background:var(--accent-blue-dim);color:var(--accent-blue)}
+.sr-badge.other{background:var(--bg-inset);color:var(--text-muted)}
+.search-paging{display:flex;align-items:center;justify-content:space-between;margin-top:.6rem;font-size:.72rem;color:var(--text-muted)}
+.search-empty{text-align:center;padding:2rem;color:var(--text-muted);font-size:.82rem}
+
+@media(max-width:640px){.container{padding:1rem}.row{flex-direction:column}.header{padding:.8rem 1rem}.meta-grid{grid-template-columns:1fr}.search-row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="header">
+<div class="header-mark">FS</div>
+<div><h1>Field Schema Extractor</h1><div class="subtitle">Extract layer metadata for LLM-ready context</div></div>
+<div class="header-right"><span class="badge">Admin</span><div class="auth-bar" id="authBar"><button class="btn-auth" onclick="signIn()">Sign in with ArcGIS</button></div></div>
+</div>
+
+<div class="container" id="authGate">
+<div class="auth-gate">
+<div class="auth-gate-icon">&#9638;</div>
+<h2>Sign in to continue</h2>
+<p>This tool queries ArcGIS Online feature services including secured layers. Sign in with your organizational account.</p>
+<button class="btn-sign-in" onclick="signIn()">Sign in with ArcGIS Online</button>
+<span style="font-size:.7rem;color:var(--text-muted);margin-top:.5rem">OAuth 2.0 redirect · No credentials stored in browser</span>
+</div>
+</div>
+
+<div class="container" id="appMain" style="display:none">
+<div class="panel">
+<div class="tab-bar">
+<button class="tab-btn active" onclick="switchTab('url',this)">Direct URL</button>
+<button class="tab-btn" onclick="switchTab('search',this)">Search Organization</button>
+</div>
+
+<!-- Tab: Direct URL -->
+<div class="tab-panel active" id="tabUrl">
+<div class="field-group"><label for="serviceUrl">Feature Service / Layer URL</label><input type="text" id="serviceUrl" placeholder="https://services6.arcgis.com/.../FeatureServer/0"><div class="hint">Paste the full REST endpoint. Token applied automatically from session. Without layer index the service root will be queried.</div></div>
+<div class="row" style="margin-top:1rem"><div><div class="toggle-row"><input type="checkbox" id="hideSys" checked><label for="hideSys">Dim system / editor tracking fields</label></div></div><div><div class="toggle-row"><input type="checkbox" id="includeDomains" checked><label for="includeDomains">Include coded domain values in export</label></div></div></div>
+<div class="btn-row"><button class="btn-primary" id="btnFetch" onclick="fetchSchema()"><span>&#9656;</span> Fetch Schema</button><button class="btn-outline" onclick="clearAll()">Clear</button></div>
+</div>
+
+<!-- Tab: Search Org -->
+<div class="tab-panel" id="tabSearch">
+<div class="search-row">
+<input type="text" id="searchQuery" placeholder="Search by name, tag, or keyword…" onkeydown="if(event.key==='Enter')searchOrg()">
+<button class="btn-primary" onclick="searchOrg()">Search</button>
+</div>
+<div class="search-filters">
+<label>Type:</label>
+<select id="searchType">
+<option value="Feature Service" selected>Feature Services</option>
+<option value="">All Item Types</option>
+<option value="Map Service">Map Services</option>
+<option value="Table">Tables</option>
+</select>
+<label>Owner:</label>
+<select id="searchOwner">
+<option value="">Anyone</option>
+<option value="mine">My Content</option>
+</select>
+<label>Sort:</label>
+<select id="searchSort">
+<option value="modified">Recently Modified</option>
+<option value="title">Name (A-Z)</option>
+<option value="numviews">Most Viewed</option>
+<option value="created">Recently Created</option>
+</select>
+</div>
+<div id="searchResults"></div>
+<div id="searchPaging" style="display:none" class="search-paging">
+<span id="searchInfo"></span>
+<div style="display:flex;gap:.4rem">
+<button class="btn-outline" id="btnPrev" onclick="searchPage(-1)" style="padding:.3rem .7rem" disabled>← Prev</button>
+<button class="btn-outline" id="btnNext" onclick="searchPage(1)" style="padding:.3rem .7rem">Next →</button>
+</div>
+</div>
+<div class="row" style="margin-top:1rem"><div><div class="toggle-row"><input type="checkbox" id="hideSys2" checked><label for="hideSys2">Dim system fields</label></div></div><div><div class="toggle-row"><input type="checkbox" id="includeDomains2" checked><label for="includeDomains2">Include domain values</label></div></div></div>
+</div>
+</div>
+
+<div id="layerPicker" class="panel" style="display:none"><div class="panel-h">Select Layer</div><div id="layerList"></div></div>
+<div class="status-bar" id="status"></div>
+
+<div class="panel" id="metaPanel" style="display:none"><div class="section-toggle open" onclick="toggleSection(this)"><span class="arrow">&#9654;</span><div class="panel-h" style="margin:0">Service &amp; Layer Metadata</div></div><div class="section-body open"><div class="meta-grid" id="metaGrid"></div></div></div>
+<div class="panel" id="relPanel" style="display:none"><div class="section-toggle open" onclick="toggleSection(this)"><span class="arrow">&#9654;</span><div class="panel-h" style="margin:0">Relationships</div></div><div class="section-body open" id="relBody"></div></div>
+<div class="panel" id="subtypePanel" style="display:none"><div class="section-toggle open" onclick="toggleSection(this)"><span class="arrow">&#9654;</span><div class="panel-h" style="margin:0">Subtypes</div></div><div class="section-body open" id="subtypeBody"></div></div>
+<div class="panel" id="indexPanel" style="display:none"><div class="section-toggle" onclick="toggleSection(this)"><span class="arrow">&#9654;</span><div class="panel-h" style="margin:0">Indexes</div></div><div class="section-body" id="indexBody"></div></div>
+<div class="panel" id="templatePanel" style="display:none"><div class="section-toggle" onclick="toggleSection(this)"><span class="arrow">&#9654;</span><div class="panel-h" style="margin:0">Feature Templates</div></div><div class="section-body" id="templateBody"></div></div>
+
+<div class="results-panel" id="resultsPanel"><div class="results-header"><div class="panel-h" style="margin:0">Field Schema</div><span class="field-count" id="fieldCount"></span></div><div class="table-wrap" style="max-height:480px;overflow-y:auto"><table><thead><tr><th>#</th><th>Field Name</th><th>Alias</th><th>Type</th><th>Length</th><th>Nullable</th><th>Editable</th><th>Default</th><th>Domain</th></tr></thead><tbody id="fieldTableBody"></tbody></table></div></div>
+
+<div class="export-panel" id="exportPanel"><span class="export-label">Export</span><button class="btn-accent" onclick="downloadLLM()">&#8615; LLM Context (.md)</button><div class="export-divider"></div><button class="btn-gold" onclick="downloadCSV()">&#8615; CSV</button><button class="btn-gold" onclick="downloadMarkdown()">&#8615; Markdown Table</button><div class="export-divider"></div><button class="btn-outline" onclick="previewOutput('llm')">Preview LLM</button><button class="btn-outline" onclick="previewOutput('csv')">Preview CSV</button><button class="btn-outline" onclick="previewOutput('md')">Preview MD</button><button class="btn-outline" onclick="copyToClipboard('llm')">Copy LLM</button></div>
+
+<div class="preview-overlay" id="previewOverlay" onclick="closePreview(event)"><div class="preview-box"><div class="preview-header"><h3 id="previewTitle">Preview</h3><button class="btn-outline" onclick="document.getElementById('previewOverlay').classList.remove('visible')" style="padding:.25rem .6rem">&#10005;</button></div><div class="preview-body"><pre id="previewContent"></pre></div><div class="preview-footer"><button class="btn-outline" id="btnCopyPreview" onclick="copyPreviewContent()">Copy to Clipboard</button><button class="btn-gold" id="btnDownloadPreview" onclick="downloadPreviewContent()">Download</button></div></div></div>
+
+<div class="footer">City of Fair Oaks Ranch · GIS Admin Utilities</div>
+</div>
+
+<script>
+/* ══════ OAuth 2.0 ══════ */
+const OAUTH={clientId:'DhZk7VoirUPP4Sa2',portalUrl:'https://fairoaksranch.maps.arcgis.com',redirectUri:window.location.href.split('#')[0].split('?')[0],expiration:120};
+let TOKEN=null,USER_INFO=null;
+
+function signIn(){window.location.href=OAUTH.portalUrl+'/sharing/rest/oauth2/authorize?client_id='+encodeURIComponent(OAUTH.clientId)+'&response_type=token&redirect_uri='+encodeURIComponent(OAUTH.redirectUri)+'&expiration='+OAUTH.expiration;}
+
+function parseToken(){const h=window.location.hash;if(!h||h.length<2)return null;const p=new URLSearchParams(h.substring(1));const t=p.get('access_token');if(t){history.replaceState(null,'',window.location.pathname+window.location.search);return{token:t,expires:Date.now()+(parseInt(p.get('expires_in')||'7200')*1000),username:p.get('username')||''};}return null;}
+
+function loadSession(){try{const s=sessionStorage.getItem('cofor_schema_auth');if(s){const d=JSON.parse(s);if(d.expires>Date.now())return d;sessionStorage.removeItem('cofor_schema_auth');}}catch(e){}return null;}
+function saveSession(d){try{sessionStorage.setItem('cofor_schema_auth',JSON.stringify(d));}catch(e){}}
+function signOut(){TOKEN=null;USER_INFO=null;sessionStorage.removeItem('cofor_schema_auth');showAuthGate();}
+
+async function fetchUserProfile(t){try{const r=await fetch(OAUTH.portalUrl+'/sharing/rest/community/self?f=json&token='+t);const d=await r.json();if(d.username)return d;}catch(e){}return null;}
+
+function showAuthGate(){$('authGate').style.display='';$('appMain').style.display='none';$('authBar').innerHTML='<button class="btn-auth" onclick="signIn()">Sign in with ArcGIS</button>';}
+
+function showApp(u){$('authGate').style.display='none';$('appMain').style.display='';const th=u.thumbnail?OAUTH.portalUrl+'/sharing/rest/community/users/'+u.username+'/info/'+u.thumbnail+'?token='+TOKEN:'';$('authBar').innerHTML=(th?'<img class="auth-avatar" src="'+th+'" alt="">':'')+' <span class="auth-user">'+esc(u.fullName||u.username)+'</span> <button class="btn-auth sign-out" onclick="signOut()">Sign out</button>';}
+
+async function initAuth(){let s=parseToken();if(s)saveSession(s);if(!s)s=loadSession();if(!s){showAuthGate();return;}TOKEN=s.token;const u=await fetchUserProfile(TOKEN);if(!u){signOut();return;}USER_INFO=u;saveSession(s);showApp(u);}
+initAuth();
+
+/* ══════ State ══════ */
+let RAW={},currentFields=[],currentLayerMeta={},previewFormat='csv';
+const SYSTEM_FIELDS=['objectid','globalid','shape','shape__area','shape__length','shape.area','shape.len','shape.starea()','shape.stlength()','created_user','created_date','last_edited_user','last_edited_date','creator','created','editor','editdate'];
+const TYPE_MAP={'esriFieldTypeOID':'OID','esriFieldTypeGlobalID':'GlobalID','esriFieldTypeString':'String','esriFieldTypeInteger':'Integer','esriFieldTypeSmallInteger':'SmallInt','esriFieldTypeDouble':'Double','esriFieldTypeSingle':'Single','esriFieldTypeDate':'Date','esriFieldTypeGeometry':'Geometry','esriFieldTypeBlob':'Blob','esriFieldTypeRaster':'Raster','esriFieldTypeGUID':'GUID','esriFieldTypeXML':'XML','esriFieldTypeDateOnly':'DateOnly','esriFieldTypeTimeOnly':'TimeOnly','esriFieldTypeTimestampOffset':'TimestampOffset','esriFieldTypeBigInteger':'BigInteger'};
+const GEOM_MAP={'esriGeometryPoint':'Point','esriGeometryMultipoint':'Multipoint','esriGeometryPolyline':'Polyline','esriGeometryPolygon':'Polygon','esriGeometryEnvelope':'Envelope'};
+
+const $=id=>document.getElementById(id);
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function csvSafe(v){if(v==null)return'';const s=String(v);return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s.replace(/"/g,'""')+'"':s;}
+function setStatus(t,m){const e=$('status');e.className='status-bar '+t;e.innerHTML=(t==='info'?'<span class="spinner"></span>':'')+m;}
+function clearStatus(){$('status').className='status-bar';$('status').innerHTML='';}
+function toggleSection(e){e.classList.toggle('open');e.nextElementSibling.classList.toggle('open');}
+$('serviceUrl').addEventListener('keydown',e=>{if(e.key==='Enter')fetchSchema();});
+
+/* ══════ Fetch ══════ */
+async function fetchSchema(layerUrl){
+const url=layerUrl||$('serviceUrl').value.trim();if(!url)return setStatus('error','Enter a service URL.');
+let base=url.split('?')[0].replace(/\/+$/,'');const params=new URLSearchParams({f:'json'});if(TOKEN)params.set('token',TOKEN);
+setStatus('info','Querying endpoint…');$('btnFetch').disabled=true;
+try{const resp=await fetch(base+'?'+params);if(!resp.ok)throw new Error('HTTP '+resp.status);const data=await resp.json();
+if(data.error){if(data.error.code===498||data.error.code===499){signOut();throw new Error('Session expired. Please sign in again.');}throw new Error(data.error.message||JSON.stringify(data.error));}
+if(data.layers&&!data.fields){showLayerPicker(base,data);return;}
+if(!data.fields||!data.fields.length)throw new Error('No fields returned.');
+$('layerPicker').style.display='none';RAW=data;currentFields=data.fields;
+buildMeta(data,base);buildRel(data);buildSub(data);buildIdx(data);buildTpl(data);renderTable(data);
+$('resultsPanel').classList.add('visible');$('exportPanel').classList.add('visible');
+fetchCount(base,params);setStatus('success','Extracted '+data.fields.length+' fields + full service metadata.');
+}catch(err){setStatus('error','Error: '+err.message);}finally{$('btnFetch').disabled=false;}}
+
+async function fetchCount(b,p){try{const q=new URLSearchParams(p);q.set('where','1=1');q.set('returnCountOnly','true');q.set('f','json');const r=await fetch(b+'/query?'+q);const d=await r.json();if(d.count!=null){currentLayerMeta.featureCount=d.count;const e=document.getElementById('mc-fc');if(e)e.textContent=d.count.toLocaleString();}}catch(e){}}
+
+function showLayerPicker(b,d){const a=[...(d.layers||[]),...(d.tables||[])];if(!a.length){setStatus('error','No layers.');return;}clearStatus();const c=$('layerList');c.innerHTML='';a.forEach(l=>{const btn=document.createElement('button');btn.className='btn-outline';btn.style.margin='.25rem';btn.textContent=l.id+': '+(l.type==='Table'?'[Table] ':'')+l.name;btn.onclick=()=>fetchSchema(b+'/'+l.id);c.appendChild(btn);});$('layerPicker').style.display='block';setStatus('info','Select a layer.');}
+
+/* ══════ Meta ══════ */
+function buildMeta(d,url){const m={};m.name=d.name||'Unknown';m.description=d.description||'';m.copyrightText=d.copyrightText||'';m.type=d.type||'—';m.geometryType=GEOM_MAP[d.geometryType]||d.geometryType||'Table (none)';m.wkid=d.extent?.spatialReference?.wkid||d.sourceSpatialReference?.wkid||'—';m.latestWkid=d.extent?.spatialReference?.latestWkid||d.sourceSpatialReference?.latestWkid||'';m.maxRecordCount=d.maxRecordCount||'—';m.objectIdField=d.objectIdField||'—';m.globalIdField=d.globalIdField||'—';m.displayField=d.displayField||'—';m.typeIdField=d.typeIdField||'';m.hasAttachments=!!d.hasAttachments;m.hasM=!!d.hasM;m.hasZ=!!d.hasZ;m.capabilities=d.capabilities||'';
+m.et=d.editFieldsInfo?{cf:d.editFieldsInfo.creatorField||'',cd:d.editFieldsInfo.creationDateField||'',ef:d.editFieldsInfo.editorField||'',ed:d.editFieldsInfo.editDateField||''}:null;
+if(d.drawingInfo?.renderer){const r=d.drawingInfo.renderer;m.rt=r.type||'';if(r.type==='uniqueValue'){m.rf1=r.field1||'';m.rf2=r.field2||'';m.uvc=r.uniqueValueInfos?.length||0;}else if(r.type==='classBreaks'){m.rf=r.field||'';m.cbc=r.classBreakInfos?.length||0;}}
+if(d.timeInfo){m.tf=d.timeInfo.startTimeField||'';m.tfe=d.timeInfo.endTimeField||'';}
+const aq=d.advancedQueryCapabilities||{};m.stats=!!d.supportsStatistics;m.page=aq.supportsPagination??!!d.supportsPagination;m.dist=aq.supportsDistinct??false;m.ob=aq.supportsOrderBy??false;m.sql=aq.supportsSqlExpression??false;
+m.url=url;m.featureCount='…';currentLayerMeta=m;
+
+const g=$('metaGrid');g.innerHTML='';
+const cards=[{l:'Layer Name',v:m.name},{l:'Service URL',v:m.url,cls:'small'},{l:'Description',v:m.description||'(none)',cls:'small'},{l:'Geometry Type',v:m.geometryType},{l:'Spatial Reference',v:m.wkid+(m.latestWkid?' (latest: '+m.latestWkid+')':'')},{l:'Feature Count',v:m.featureCount,id:'mc-fc'},{l:'Max Record Count',v:m.maxRecordCount},{l:'Object ID Field',v:m.objectIdField},{l:'Global ID Field',v:m.globalIdField},{l:'Display Field',v:m.displayField},{l:'Capabilities',html:capT(m.capabilities)},{l:'Has Attachments',v:m.hasAttachments?'Yes':'No'},{l:'Has Z / M',v:(m.hasZ?'Z ':'')+(m.hasM?'M ':'')||'No'}];
+if(m.et){cards.push({l:'Editor Tracking',html:'<span class="tag tag-green">Enabled</span><br><span style="font-size:.68rem;color:var(--text-muted)">Creator: <code>'+esc(m.et.cf)+'</code> · Created: <code>'+esc(m.et.cd)+'</code><br>Editor: <code>'+esc(m.et.ef)+'</code> · Edited: <code>'+esc(m.et.ed)+'</code></span>'});}else cards.push({l:'Editor Tracking',v:'Not enabled'});
+if(m.rt){let rd=m.rt;if(m.rt==='uniqueValue')rd+=' on '+m.rf1+(m.rf2?', '+m.rf2:'')+' ('+m.uvc+' values)';else if(m.rt==='classBreaks')rd+=' on '+m.rf+' ('+m.cbc+' breaks)';cards.push({l:'Renderer',v:rd});}
+if(m.tf)cards.push({l:'Time Enabled',v:'Start: '+m.tf+(m.tfe?' · End: '+m.tfe:'')});
+cards.push({l:'Query Capabilities',html:qT(m)});
+if(m.copyrightText)cards.push({l:'Copyright',v:m.copyrightText,cls:'small'});
+cards.forEach(c=>{const div=document.createElement('div');div.className='meta-card';div.innerHTML='<div class="mc-label">'+c.l+'</div>'+(c.html?'<div class="mc-value">'+c.html+'</div>':'<div class="mc-value'+(c.cls?' '+c.cls:'')+'"'+(c.id?' id="'+c.id+'"':'')+'>'+esc(String(c.v))+'</div>');g.appendChild(div);});
+$('metaPanel').style.display='block';}
+
+function capT(c){if(!c)return'<span class="tag tag-muted">None</span>';return c.split(',').map(x=>{x=x.trim();return'<span class="tag '+(x==='Query'?'tag-green':'tag-gold')+'">'+esc(x)+'</span>';}).join('');}
+function qT(m){return[['Stats',m.stats],['Page',m.page],['Distinct',m.dist],['OrderBy',m.ob],['SQL',m.sql]].map(([l,v])=>'<span class="tag '+(v?'tag-green':'tag-muted')+'">'+l+'</span>').join('');}
+
+/* ══════ Relationships ══════ */
+function buildRel(d){const r=d.relationships;if(!r||!r.length){$('relPanel').style.display='none';return;}const b=$('relBody');b.innerHTML='';r.forEach(x=>{const div=document.createElement('div');div.className='meta-card';div.style.marginBottom='.5rem';div.innerHTML='<div class="mc-label">ID '+x.id+': '+esc(x.name||'')+'</div><div class="mc-value small">Related Table ID: <strong>'+x.relatedTableId+'</strong> · <span class="tag tag-blue">'+esc(x.role||'')+'</span> · <span class="tag tag-muted">'+esc(x.cardinality||'')+'</span><br>Key: <code>'+esc(x.keyField||'')+'</code>'+(x.keyFieldInRelationship?' → <code>'+esc(x.keyFieldInRelationship)+'</code>':'')+'</div>';b.appendChild(div);});$('relPanel').style.display='block';}
+
+/* ══════ Subtypes ══════ */
+function buildSub(d){const s=d.types;if(!s||!s.length){$('subtypePanel').style.display='none';return;}const b=$('subtypeBody');b.innerHTML='<div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:.5rem">Type ID Field: <code>'+esc(d.typeIdField||'')+'</code> · '+s.length+' subtypes</div>';s.forEach(t=>{const div=document.createElement('div');div.className='meta-card';div.style.marginBottom='.4rem';let dm='';if(t.domains){const e=Object.entries(t.domains).filter(([,v])=>v&&v.type);if(e.length)dm='<br><span style="font-size:.68rem;color:var(--text-muted)">Domains: '+e.map(([f,d])=>'<code>'+esc(f)+'</code>→'+esc(d.name||d.type)).join(', ')+'</span>';}div.innerHTML='<div class="mc-label">Code '+t.id+': '+esc(t.name)+'</div><div class="mc-value small">'+dm+'</div>';b.appendChild(div);});$('subtypePanel').style.display='block';}
+
+/* ══════ Indexes ══════ */
+function buildIdx(d){const i=d.indexes;if(!i||!i.length){$('indexPanel').style.display='none';return;}const b=$('indexBody');b.innerHTML='';const t=document.createElement('table');t.innerHTML='<thead><tr><th>Name</th><th>Fields</th><th>Unique</th><th>Asc</th></tr></thead>';const tb=document.createElement('tbody');i.forEach(x=>{const tr=document.createElement('tr');tr.innerHTML='<td class="fname" style="font-size:.73rem">'+esc(x.name)+'</td><td style="font-family:var(--mono);font-size:.73rem;color:var(--text-secondary)">'+esc(x.fields)+'</td><td class="fnullable"><span class="'+(x.isUnique?'yes':'no')+'">'+(x.isUnique?'✓':'✗')+'</span></td><td class="fnullable"><span class="'+(x.isAscending?'yes':'no')+'">'+(x.isAscending?'✓':'✗')+'</span></td>';tb.appendChild(tr);});t.appendChild(tb);b.appendChild(t);$('indexPanel').style.display='block';}
+
+/* ══════ Templates ══════ */
+function buildTpl(d){const t=d.templates;if(!t||!t.length){$('templatePanel').style.display='none';return;}const b=$('templateBody');b.innerHTML='';t.forEach(x=>{const div=document.createElement('div');div.className='meta-card';div.style.marginBottom='.4rem';const a=x.prototype?.attributes;let s='';if(a){const e=Object.entries(a).filter(([,v])=>v!=null);s=e.length?e.map(([k,v])=>'<code>'+esc(k)+'</code>: '+esc(String(v))).join(', '):'<span style="color:var(--text-muted)">All null</span>';}div.innerHTML='<div class="mc-label">'+esc(x.name)+'</div><div class="mc-value small">'+s+'</div>';b.appendChild(div);});$('templatePanel').style.display='block';}
+
+/* ══════ Field Table ══════ */
+function renderTable(d){const f=d.fields,dim=$('hideSys').checked,tb=$('fieldTableBody');tb.innerHTML='';f.forEach((x,i)=>{const sys=SYSTEM_FIELDS.includes(x.name.toLowerCase());const tr=document.createElement('tr');if(sys&&dim)tr.classList.add('system-field');const st=TYPE_MAP[x.type]||x.type;const dom=x.domain?(x.domain.type==='codedValue'?'CV: '+x.domain.name:'Range: '+x.domain.name):'—';const dv=x.defaultValue!=null?String(x.defaultValue):'—';tr.innerHTML='<td style="font-family:var(--mono);color:var(--text-muted);font-size:.7rem">'+(i+1)+'</td><td class="fname">'+esc(x.name)+'</td><td class="falias">'+esc(x.alias||'')+'</td><td><span class="ftype">'+esc(st)+'</span></td><td class="flength">'+(x.length||'—')+'</td><td class="fnullable"><span class="'+(x.nullable!==false?'yes':'no')+'">'+(x.nullable!==false?'✓':'✗')+'</span></td><td class="feditable"><span class="'+(x.editable!==false?'yes':'no')+'">'+(x.editable!==false?'✓':'✗')+'</span></td><td class="fdefault">'+esc(dv)+'</td><td class="fdomain">'+esc(dom)+'</td>';tb.appendChild(tr);});$('fieldCount').textContent=f.length+' fields';}
+
+/* ══════ LLM Context ══════ */
+function genLLM(){const m=currentLayerMeta,inc=$('includeDomains').checked;let o='# Layer Schema: '+m.name+'\n\n> Auto-extracted on '+new Date().toISOString().split('T')[0]+' by CoFOR Field Schema Extractor\n\n## Service Overview\n\n| Property | Value |\n| --- | --- |\n';
+o+='| URL | `'+m.url+'` |\n| Geometry | '+m.geometryType+' |\n| Spatial Reference (WKID) | '+m.wkid+(m.latestWkid?' (latest: '+m.latestWkid+')':'')+' |\n| Feature Count | '+(typeof m.featureCount==='number'?m.featureCount.toLocaleString():m.featureCount)+' |\n| Max Record Count | '+m.maxRecordCount+' |\n| Object ID Field | `'+m.objectIdField+'` |\n| Global ID Field | `'+m.globalIdField+'` |\n| Display Field | `'+m.displayField+'` |\n| Capabilities | '+m.capabilities+' |\n| Has Attachments | '+(m.hasAttachments?'Yes':'No')+' |\n| Has Z | '+(m.hasZ?'Yes':'No')+' |\n| Has M | '+(m.hasM?'Yes':'No')+' |\n';
+if(m.description)o+='| Description | '+m.description.replace(/\n/g,' ')+' |\n';if(m.copyrightText)o+='| Copyright | '+m.copyrightText.replace(/\n/g,' ')+' |\n';o+='\n';
+if(m.et){o+='## Editor Tracking\n\n| Role | Field |\n| --- | --- |\n| Creator | `'+m.et.cf+'` |\n| Creation Date | `'+m.et.cd+'` |\n| Editor | `'+m.et.ef+'` |\n| Edit Date | `'+m.et.ed+'` |\n\n';}
+if(m.rt){o+='## Renderer\n\n- Type: `'+m.rt+'`\n';if(m.rt==='uniqueValue')o+='- Field(s): `'+m.rf1+'`'+(m.rf2?', `'+m.rf2+'`':'')+'\n- Unique values: '+m.uvc+'\n';else if(m.rt==='classBreaks')o+='- Field: `'+m.rf+'`\n- Breaks: '+m.cbc+'\n';o+='\n';}
+o+='## Query Capabilities\n\nStatistics: '+(m.stats?'Yes':'No')+' · Pagination: '+(m.page?'Yes':'No')+' · Distinct: '+(m.dist?'Yes':'No')+' · OrderBy: '+(m.ob?'Yes':'No')+' · SQL: '+(m.sql?'Yes':'No')+'\n\n';
+const rels=RAW.relationships;if(rels&&rels.length){o+='## Relationships\n\n| ID | Name | Related Table ID | Role | Cardinality | Key Field | Foreign Key |\n| --- | --- | --- | --- | --- | --- | --- |\n';rels.forEach(r=>{o+='| '+r.id+' | '+(r.name||'')+' | '+r.relatedTableId+' | '+(r.role||'')+' | '+(r.cardinality||'')+' | `'+(r.keyField||'')+'` | `'+(r.keyFieldInRelationship||'')+'` |\n';});o+='\n';}
+const types=RAW.types;if(types&&types.length){o+='## Subtypes\n\nType ID Field: `'+(RAW.typeIdField||'')+'`\n\n| Code | Name | Domain Overrides |\n| --- | --- | --- |\n';types.forEach(t=>{let d='';if(t.domains)d=Object.entries(t.domains).filter(([,v])=>v&&v.type).map(([f,dm])=>f+'→'+(dm.name||dm.type)).join('; ');o+='| '+t.id+' | '+t.name+' | '+(d||'—')+' |\n';});o+='\n';}
+const idx=RAW.indexes;if(idx&&idx.length){o+='## Indexes\n\n| Name | Fields | Unique |\n| --- | --- | --- |\n';idx.forEach(x=>{o+='| '+x.name+' | `'+x.fields+'` | '+(x.isUnique?'Yes':'No')+' |\n';});o+='\n';}
+const tpls=RAW.templates;if(tpls&&tpls.length){o+='## Feature Templates\n\n';tpls.forEach(t=>{o+='### '+t.name+'\n\n';const a=t.prototype?.attributes;if(a){const e=Object.entries(a).filter(([,v])=>v!=null);if(e.length){o+='| Field | Default |\n| --- | --- |\n';e.forEach(([k,v])=>{o+='| `'+k+'` | '+v+' |\n';});o+='\n';}else o+='All defaults null.\n\n';}});}
+o+='## Field Schema ('+currentFields.length+' fields)\n\n';const h=['#','Field Name','Alias','Type','Length','Nullable','Editable','Default Value'];if(inc)h.push('Domain');o+='| '+h.join(' | ')+' |\n| '+h.map(()=>'---').join(' | ')+' |\n';
+currentFields.forEach((f,i)=>{const st=TYPE_MAP[f.type]||f.type;const dv=f.defaultValue!=null?String(f.defaultValue):'';const c=[i+1,'`'+f.name+'`',f.alias||'',st,f.length||'—',f.nullable!==false?'Yes':'No',f.editable!==false?'Yes':'No',dv];if(inc){if(f.domain){let ds=f.domain.name;if(f.domain.type==='codedValue'&&f.domain.codedValues)ds+=': '+f.domain.codedValues.map(cv=>cv.code+'='+cv.name).join(', ');else if(f.domain.type==='range')ds+=': '+(f.domain.minValue??'')+' – '+(f.domain.maxValue??'');c.push(ds);}else c.push('—');}o+='| '+c.join(' | ')+' |\n';});o+='\n';
+if(inc){const df=currentFields.filter(f=>f.domain&&f.domain.type==='codedValue'&&f.domain.codedValues);if(df.length){o+='## Domain Dictionary\n\n';const seen=new Set();df.forEach(f=>{if(seen.has(f.domain.name))return;seen.add(f.domain.name);const ub=currentFields.filter(ff=>ff.domain?.name===f.domain.name).map(ff=>'`'+ff.name+'`').join(', ');o+='### '+f.domain.name+'\n\nUsed by: '+ub+'\n\n| Code | Name |\n| --- | --- |\n';f.domain.codedValues.forEach(cv=>{o+='| '+cv.code+' | '+cv.name+' |\n';});o+='\n';});}}
+return o;}
+
+/* ══════ CSV / MD ══════ */
+function genCSV(){const inc=$('includeDomains').checked;const h=['FieldName','Alias','Type','Length','Nullable','Editable','DefaultValue'];if(inc)h.push('DomainName','DomainType','DomainValues');const rows=[h.join(',')];currentFields.forEach(f=>{const st=TYPE_MAP[f.type]||f.type;const c=[csvSafe(f.name),csvSafe(f.alias||''),csvSafe(st),f.length||'',f.nullable!==false?'yes':'no',f.editable!==false?'yes':'no',csvSafe(f.defaultValue!=null?String(f.defaultValue):'')];if(inc){if(f.domain){c.push(csvSafe(f.domain.name));c.push(f.domain.type==='codedValue'?'CodedValue':'Range');if(f.domain.type==='codedValue'&&f.domain.codedValues)c.push(csvSafe(f.domain.codedValues.map(cv=>cv.code+'='+cv.name).join('; ')));else if(f.domain.type==='range')c.push(csvSafe((f.domain.minValue??'')+' - '+(f.domain.maxValue??'')));else c.push('');}else c.push('','','');}rows.push(c.join(','));});return rows.join('\n');}
+
+function genMD(){const inc=$('includeDomains').checked,m=currentLayerMeta;let o='# '+m.name+' — Field Schema\n\nURL: `'+m.url+'` · Geometry: '+m.geometryType+' · WKID: '+m.wkid+' · OID: `'+m.objectIdField+'`\n\n';const h=['Field Name','Alias','Type','Length','Nullable','Editable'];if(inc)h.push('Domain');o+='| '+h.join(' | ')+' |\n| '+h.map(()=>'---').join(' | ')+' |\n';currentFields.forEach(f=>{const st=TYPE_MAP[f.type]||f.type;const c=['`'+f.name+'`',f.alias||'',st,String(f.length||'—'),f.nullable!==false?'Yes':'No',f.editable!==false?'Yes':'No'];if(inc){if(f.domain){let ds=f.domain.name;if(f.domain.type==='codedValue'&&f.domain.codedValues)ds+=': '+f.domain.codedValues.map(cv=>cv.code+'='+cv.name).join(', ');c.push(ds);}else c.push('—');}o+='| '+c.join(' | ')+' |\n';});return o;}
+
+/* ══════ Download / Preview ══════ */
+function dl(c,n,m){const b=new Blob([c],{type:m});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();URL.revokeObjectURL(a.href);}
+function san(n){return n.replace(/[^a-zA-Z0-9_-]/g,'_').substring(0,60);}
+function downloadCSV(){dl(genCSV(),san(currentLayerMeta.name)+'_fields.csv','text/csv');}
+function downloadMarkdown(){dl(genMD(),san(currentLayerMeta.name)+'_fields.md','text/markdown');}
+function downloadLLM(){dl(genLLM(),san(currentLayerMeta.name)+'_llm_context.md','text/markdown');}
+function previewOutput(f){previewFormat=f;$('previewTitle').textContent=f==='csv'?'CSV Preview':f==='md'?'Markdown Table':'LLM Context Preview';$('previewContent').textContent=f==='csv'?genCSV():f==='md'?genMD():genLLM();$('previewOverlay').classList.add('visible');}
+function closePreview(e){if(e.target===$('previewOverlay'))$('previewOverlay').classList.remove('visible');}
+function copyPreviewContent(){navigator.clipboard.writeText($('previewContent').textContent).then(()=>{$('btnCopyPreview').textContent='Copied!';setTimeout(()=>$('btnCopyPreview').textContent='Copy to Clipboard',1500);});}
+function downloadPreviewContent(){if(previewFormat==='csv')downloadCSV();else if(previewFormat==='md')downloadMarkdown();else downloadLLM();}
+function copyToClipboard(f){const c=f==='csv'?genCSV():f==='md'?genMD():genLLM();navigator.clipboard.writeText(c).then(()=>{setStatus('success','Copied to clipboard.');setTimeout(clearStatus,2000);});}
+function clearAll(){$('serviceUrl').value='';['resultsPanel','exportPanel'].forEach(id=>$(id).classList.remove('visible'));['metaPanel','relPanel','subtypePanel','indexPanel','templatePanel','layerPicker'].forEach(id=>$(id).style.display='none');$('searchResults').innerHTML='';$('searchPaging').style.display='none';clearStatus();currentFields=[];currentLayerMeta={};RAW={};}
+
+/* ══════ Tabs ══════ */
+function switchTab(id,btn){
+document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+btn.classList.add('active');
+$('tab'+id.charAt(0).toUpperCase()+id.slice(1)).classList.add('active');
+}
+
+/* Sync toggle values: search tab mirrors URL tab and vice versa */
+function getHideSys(){return $('hideSys').checked||$('hideSys2').checked;}
+function getIncDomains(){return $('includeDomains').checked||$('includeDomains2').checked;}
+/* Override the checkbox reads in render/export to use active tab */
+function syncToggles(from){
+if(from==='search'){$('hideSys').checked=$('hideSys2').checked;$('includeDomains').checked=$('includeDomains2').checked;}
+else{$('hideSys2').checked=$('hideSys').checked;$('includeDomains2').checked=$('includeDomains').checked;}
+}
+
+/* ══════ Org Search ══════ */
+let searchStart=1, searchTotal=0, searchNum=15, lastQuery='';
+
+async function searchOrg(start){
+const q=$('searchQuery').value.trim();
+if(!q&&!start)return;
+if(start)searchStart=start;else{searchStart=1;lastQuery=q;}
+if(!TOKEN)return setStatus('error','Sign in to search your organization.');
+
+const type=$('searchType').value;
+const owner=$('searchOwner').value;
+const sort=$('searchSort').value;
+
+let queryStr=lastQuery;
+if(type)queryStr+=' type:"'+type+'"';
+if(owner==='mine'&&USER_INFO)queryStr+=' owner:'+USER_INFO.username;
+
+const params=new URLSearchParams({
+f:'json',
+token:TOKEN,
+q:queryStr,
+sortField:sort,
+sortOrder:sort==='title'?'asc':'desc',
+num:searchNum,
+start:searchStart
+});
+
+setStatus('info','Searching organization…');
+
+try{
+const r=await fetch(OAUTH.portalUrl+'/sharing/rest/search?'+params);
+const d=await r.json();
+if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+
+searchTotal=d.total||0;
+renderSearchResults(d.results||[],d);
+if(searchTotal>0)setStatus('success','Found '+searchTotal+' item'+(searchTotal!==1?'s':'')+'.');
+else{clearStatus();$('searchResults').innerHTML='<div class="search-empty">No items found. Try different keywords or filters.</div>';}
+}catch(err){
+setStatus('error','Search error: '+err.message);
+}
+}
+
+function searchPage(dir){
+const next=searchStart+(dir*searchNum);
+if(next<1||next>searchTotal)return;
+searchOrg(next);
+}
+
+function renderSearchResults(items,meta){
+const c=$('searchResults');c.innerHTML='';
+if(!items.length){c.innerHTML='<div class="search-empty">No results.</div>';$('searchPaging').style.display='none';return;}
+
+items.forEach(item=>{
+const card=document.createElement('div');card.className='sr-card';
+
+/* Determine badge */
+const kw=(item.typeKeywords||[]).join(' ').toLowerCase();
+let badgeCls='other',badgeTxt=item.type||'Item';
+if(kw.includes('hosted service'))badgeTxt='Hosted',badgeCls='hosted';
+else if(kw.includes('service2service')||item.type==='Feature Service'&&kw.includes('view service'))badgeTxt='View',badgeCls='view';
+else if(item.type==='Feature Service')badgeTxt='Feature Svc',badgeCls='hosted';
+else if(item.type==='Map Service')badgeTxt='Map Svc',badgeCls='other';
+else if(item.type==='Table')badgeTxt='Table',badgeCls='view';
+
+/* Thumbnail */
+const thumbUrl=item.thumbnail
+? OAUTH.portalUrl+'/sharing/rest/content/items/'+item.id+'/info/'+item.thumbnail+'?token='+TOKEN
+: '';
+
+/* Modified date */
+const mod=item.modified?new Date(item.modified).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+
+card.innerHTML=
+(thumbUrl?'<img class="sr-thumb" src="'+thumbUrl+'" alt="" loading="lazy">':'<div class="sr-thumb"></div>')+
+'<div class="sr-body">'+
+'<div class="sr-title" title="'+esc(item.title||'')+'">'+esc(item.title||'Untitled')+'</div>'+
+(item.snippet?'<div class="sr-snippet">'+esc(item.snippet)+'</div>':'')+
+'<div class="sr-meta">'+
+'<span>Owner: <span class="val">'+esc(item.owner||'')+'</span></span>'+
+'<span>Modified: <span class="val">'+mod+'</span></span>'+
+'<span>Views: <span class="val">'+(item.numViews||0)+'</span></span>'+
+(item.access?'<span class="tag tag-'+(item.access==='public'?'green':item.access==='org'?'blue':'muted')+'">'+item.access+'</span>':'')+
+'</div></div>'+
+'<span class="sr-badge '+badgeCls+'">'+badgeTxt+'</span>';
+
+card.onclick=()=>selectSearchItem(item);
+c.appendChild(card);
+});
+
+/* Paging */
+const endIdx=Math.min(searchStart+searchNum-1,searchTotal);
+$('searchInfo').textContent='Showing '+searchStart+'–'+endIdx+' of '+searchTotal;
+$('btnPrev').disabled=searchStart<=1;
+$('btnNext').disabled=(searchStart+searchNum)>searchTotal;
+$('searchPaging').style.display='flex';
+}
+
+async function selectSearchItem(item){
+syncToggles('search');
+/* Resolve service URL from item */
+setStatus('info','Loading '+esc(item.title)+'…');
+try{
+const r=await fetch(OAUTH.portalUrl+'/sharing/rest/content/items/'+item.id+'?f=json&token='+TOKEN);
+const d=await r.json();
+if(d.error)throw new Error(d.error.message);
+
+let serviceUrl=d.url;
+if(!serviceUrl)throw new Error('Item has no service URL. It may not be a feature service.');
+
+/* Clean trailing slash */
+serviceUrl=serviceUrl.replace(/\/+$/,'');
+
+/* Set in URL input and switch to URL tab for continuity */
+$('serviceUrl').value=serviceUrl;
+
+/* Fetch via existing flow */
+await fetchSchema(serviceUrl);
+}catch(err){
+setStatus('error','Could not load item: '+err.message);
+}
+}
+</script>
+</body>
+</html>
