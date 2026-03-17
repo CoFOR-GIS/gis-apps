@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>City of Fair Oaks Ranch — Annexation History</title>
+
+<!-- ArcGIS JS SDK 4.31 -->
+<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+<script src="https://js.arcgis.com/4.31/"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --cream: #FAF6EE;
+    --forest: #1B3A2D;
+    --forest-light: #2A5640;
+    --forest-mid: #234A38;
+    --sage: #8D956C;
+    --sage-light: #A8AE8E;
+    --gold: #C8A94E;
+    --gold-bright: #E0BE55;
+    --text-primary: #1B3A2D;
+    --text-secondary: #4A5D52;
+    --text-muted: #7A8A80;
+    --border: rgba(27, 58, 45, 0.12);
+    --shadow: rgba(27, 58, 45, 0.08);
+    --panel-width: 380px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; font-family: 'DM Sans', sans-serif; }
+  body { display: flex; background: var(--cream); color: var(--text-primary); }
+
+  /* ═══════════════════════════════════════════
+     SIDE PANEL
+     ═══════════════════════════════════════════ */
+  #panel {
+    width: var(--panel-width);
+    min-width: var(--panel-width);
+    height: 100vh;
+    background: var(--cream);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 10;
+    box-shadow: 4px 0 24px var(--shadow);
+  }
+
+  #panel-header {
+    padding: 28px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--forest);
+    color: var(--cream);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #panel-header::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+
+  #panel-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+  }
+
+  #panel-header .subtitle {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--sage-light);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  #panel-header .org-name {
+    font-size: 11px;
+    font-weight: 300;
+    color: rgba(250, 246, 238, 0.55);
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  #panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  #panel-body::-webkit-scrollbar { width: 5px; }
+  #panel-body::-webkit-scrollbar-track { background: transparent; }
+  #panel-body::-webkit-scrollbar-thumb { background: var(--sage-light); border-radius: 3px; }
+
+  /* ── Search ── */
+  .search-container { padding: 16px 24px 12px; }
+
+  .search-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .search-tab {
+    flex: 1;
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    background: white;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .search-tab.active {
+    background: var(--forest);
+    color: var(--cream);
+  }
+
+  .search-tab:not(:last-child) {
+    border-right: 1px solid var(--border);
+  }
+
+  .search-input-wrap { position: relative; }
+
+  .search-input-wrap input {
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text-primary);
+    background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237A8A80' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.442.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E") no-repeat 12px center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+
+  .search-input-wrap input:focus {
+    border-color: var(--sage);
+    box-shadow: 0 0 0 3px rgba(141, 149, 108, 0.15);
+  }
+
+  .search-input-wrap input::placeholder { color: var(--text-muted); }
+
+  .search-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-style: italic;
+  }
+
+  /* Address results dropdown */
+  .address-results {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 20;
+    box-shadow: 0 6px 16px var(--shadow);
+    display: none;
+  }
+
+  .address-results.visible { display: block; }
+
+  .address-result-item {
+    padding: 9px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    transition: background 0.1s;
+  }
+
+  .address-result-item:hover { background: rgba(27,58,45,0.05); }
+  .address-result-item:last-child { border-bottom: none; }
+
+  /* ── Stats Row ── */
+  .stats-row {
+    display: flex;
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-card {
+    flex: 1;
+    background: white;
+    padding: 14px 12px;
+    text-align: center;
+  }
+
+  .stat-card .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--forest);
+    line-height: 1;
+  }
+
+  .stat-card .stat-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* ── Section titles ── */
+  .section-title {
+    padding: 14px 24px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+  }
+
+  /* ── Legend ── */
+  .legend-container { padding: 0 24px 12px; }
+
+  .legend-era {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(27,58,45,0.06);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .legend-era:last-child { border-bottom: none; }
+  .legend-era:hover { background: rgba(27,58,45,0.03); margin: 0 -24px; padding: 7px 24px; }
+  .legend-era.dimmed { opacity: 0.35; }
+  .legend-era.active-era { background: rgba(27,58,45,0.06); margin: 0 -24px; padding: 7px 24px; font-weight: 700; }
+
+  .legend-swatch {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    border: 1px solid rgba(0,0,0,0.08);
+  }
+
+  .legend-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .legend-count { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+  /* ── Annexation List ── */
+  .annex-list { padding: 0 24px 24px; }
+
+  .annex-item {
+    padding: 11px 14px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    background: white;
+  }
+
+  .annex-item:hover {
+    border-color: var(--sage);
+    box-shadow: 0 2px 8px var(--shadow);
+    transform: translateY(-1px);
+  }
+
+  .annex-item.active {
+    border-color: var(--forest);
+    box-shadow: 0 2px 12px rgba(27,58,45,0.15);
+  }
+
+  .annex-item .annex-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .annex-item .annex-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .annex-item .annex-meta span { display: flex; align-items: center; gap: 4px; }
+
+  .no-results {
+    text-align: center;
+    padding: 32px 24px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ── Footer ── */
+  #panel-footer {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    background: white;
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  #panel-footer a { color: var(--forest); text-decoration: none; font-weight: 500; }
+
+  /* ═══════════════════════════════════════════
+     MAP CONTAINER
+     ═══════════════════════════════════════════ */
+  #map-container { flex: 1; position: relative; }
+  #viewDiv { width: 100%; height: 100%; }
+
+  /* ── Time Slider ── */
+  .time-slider-container {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 14px 24px 16px;
+    border-radius: 14px;
+    z-index: 5;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    min-width: 380px;
+    max-width: 580px;
+    width: 45%;
+  }
+
+  .time-slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .time-slider-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+  }
+
+  .time-slider-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--forest);
+  }
+
+  .time-slider-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .time-slider-controls input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--forest), var(--sage));
+    outline: none;
+  }
+
+  .time-slider-controls input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--forest);
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  .time-slider-controls input[type="range"]::-moz-range-thumb {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--forest);
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+
+  .time-range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .btn-reset {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-reset:hover { background: var(--forest); color: white; border-color: var(--forest); }
+
+  /* ═══════════════════════════════════════════
+     DOCUMENT VIEWER MODAL
+     ═══════════════════════════════════════════ */
+  #doc-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(27, 58, 45, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+
+  #doc-modal-overlay.visible { display: flex; }
+
+  #doc-modal {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 900px;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+    animation: modalSlide 0.25s ease-out;
+  }
+
+  @keyframes modalSlide {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  #doc-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--forest);
+    color: var(--cream);
+    flex-shrink: 0;
+  }
+
+  #doc-modal-header .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  #doc-modal-header .modal-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .modal-btn {
+    padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .modal-btn:hover { background: rgba(255,255,255,0.12); }
+
+  .modal-btn-close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    color: var(--cream);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .modal-btn-close:hover { background: rgba(255,255,255,0.25); }
+
+  #doc-modal-body {
+    flex: 1;
+    position: relative;
+    background: #e8e4dc;
+  }
+
+  #doc-modal-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  #doc-modal-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8e4dc;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* ═══════════════════════════════════════════
+     POPUP OVERRIDES
+     ═══════════════════════════════════════════ */
+  .esri-popup__main-container {
+    border-radius: 12px !important;
+    font-family: 'DM Sans', sans-serif !important;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
+    max-width: 340px !important;
+  }
+
+  .esri-popup__header {
+    background: var(--forest) !important;
+    color: var(--cream) !important;
+    padding: 14px 16px !important;
+  }
+
+  .esri-popup__header-title {
+    font-family: 'Playfair Display', serif !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--cream) !important;
+  }
+
+  .esri-popup__content { padding: 0 !important; }
+
+  .popup-body { padding: 14px 16px 8px; }
+
+  .popup-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(27,58,45,0.08);
+    font-size: 13px;
+  }
+
+  .popup-row:last-of-type { border-bottom: none; }
+
+  .popup-label {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  .popup-value {
+    color: var(--text-primary);
+    font-weight: 600;
+    text-align: right;
+    max-width: 60%;
+  }
+
+  /* View Document CTA — high-contrast gold */
+  .popup-doc-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 10px 16px 16px;
+    padding: 12px 16px;
+    background: var(--gold);
+    color: var(--forest);
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    transition: all 0.2s;
+    border: 2px solid var(--gold);
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+
+  .popup-doc-link:hover {
+    background: var(--gold-bright);
+    border-color: var(--gold-bright);
+    box-shadow: 0 4px 14px rgba(200, 169, 78, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .popup-doc-link svg { flex-shrink: 0; }
+
+  .popup-doc-unavailable {
+    display: block;
+    margin: 10px 16px 16px;
+    padding: 10px 16px;
+    background: #f0ede6;
+    color: var(--text-muted);
+    border-radius: 8px;
+    font-size: 12px;
+    text-align: center;
+    font-style: italic;
+  }
+
+  .popup-calc-note {
+    font-size: 9px;
+    color: var(--text-muted);
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  /* ═══════════════════════════════════════════
+     MOBILE
+     ═══════════════════════════════════════════ */
+  #panel-toggle {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 20;
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    background: var(--forest);
+    color: var(--cream);
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    align-items: center;
+    justify-content: center;
+    /* HIDDEN on desktop — only shows on mobile */
+    display: none;
+  }
+
+  /* ═══════════════════════════════════════════
+     LOADING OVERLAY
+     ═══════════════════════════════════════════ */
+  #loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--forest);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: opacity 0.5s;
+  }
+
+  #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .loading-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 8px;
+  }
+
+  .loading-sub {
+    font-size: 13px;
+    color: var(--sage-light);
+    margin-bottom: 28px;
+  }
+
+  .loading-bar {
+    width: 200px; height: 3px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .loading-bar-fill {
+    height: 100%; width: 40%;
+    background: var(--sage);
+    border-radius: 2px;
+    animation: loadSlide 1.2s ease-in-out infinite;
+  }
+
+  @keyframes loadSlide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+
+  /* ═══════════════════════════════════════════
+     RESPONSIVE
+     ═══════════════════════════════════════════ */
+  @media (max-width: 860px) {
+    #panel {
+      position: fixed;
+      left: 0; top: 0;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 50;
+    }
+    #panel.open { transform: translateX(0); }
+    #panel-toggle { display: flex; }
+    .time-slider-container { min-width: 260px; width: 80%; }
+    #doc-modal-overlay { padding: 16px; }
+    #doc-modal { max-width: 100%; height: 90vh; }
+  }
+
+  /* ── ArcGIS widget overrides ── */
+  .esri-ui-corner .esri-component {
+    border-radius: 10px !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1) !important;
+  }
+
+  .esri-zoom .esri-widget--button {
+    background: var(--forest) !important;
+    color: var(--cream) !important;
+    border: none !important;
+  }
+
+  .esri-zoom .esri-widget--button:hover { background: var(--forest-light) !important; }
+  .esri-attribution { font-size: 9px !important; }
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading-overlay">
+  <div class="loading-title">Annexation History</div>
+  <div class="loading-sub">City of Fair Oaks Ranch, Texas</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<!-- Side Panel -->
+<div id="panel">
+  <div id="panel-header">
+    <div class="subtitle">Interactive Map</div>
+    <h1>Annexation History</h1>
+    <div class="org-name">City of Fair Oaks Ranch, Texas</div>
+  </div>
+
+  <div id="panel-body">
+    <!-- Search -->
+    <div class="search-container">
+      <div class="search-tabs">
+        <button class="search-tab active" data-mode="annex">Ordinance / Year</button>
+        <button class="search-tab" data-mode="address">Address Lookup</button>
+      </div>
+      <div class="search-input-wrap">
+        <input type="text" id="search-input" placeholder="Search by ordinance or year…">
+        <div class="address-results" id="address-results"></div>
+      </div>
+      <div class="search-hint" id="search-hint">Filter the annexation list below</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-label">Annexations</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-earliest">—</div>
+        <div class="stat-label">Earliest</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-latest">—</div>
+        <div class="stat-label">Latest</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-acres">—</div>
+        <div class="stat-label">Total Acres</div>
+      </div>
+    </div>
+
+    <!-- Legend by Era -->
+    <div class="section-title">Annexation Eras</div>
+    <div class="legend-container" id="legend-container"></div>
+
+    <!-- List -->
+    <div class="section-title" id="list-title">All Annexations</div>
+    <div class="annex-list" id="annex-list"></div>
+  </div>
+
+  <div id="panel-footer">
+    City of Fair Oaks Ranch GIS &middot; <a href="https://www.fairoaksranchtx.org" target="_blank">fairoaksranchtx.org</a><br>
+    <span style="font-size:9px;opacity:0.6">Acreage marked with * is calculated from mapped geometry</span>
+  </div>
+</div>
+
+<!-- Mobile toggle -->
+<button id="panel-toggle" onclick="document.getElementById('panel').classList.toggle('open')">☰</button>
+
+<!-- Map -->
+<div id="map-container">
+  <div id="viewDiv"></div>
+
+  <!-- Time Slider -->
+  <div class="time-slider-container">
+    <div class="time-slider-header">
+      <span class="time-slider-label">Show Annexations Through</span>
+      <span class="time-slider-value" id="slider-value">All Years</span>
+    </div>
+    <div class="time-slider-controls">
+      <input type="range" id="time-slider" min="1970" max="2026" value="2026" step="1">
+      <button class="btn-reset" id="btn-show-all">Show All</button>
+    </div>
+    <div class="time-range-labels">
+      <span id="range-min">—</span>
+      <span id="range-max">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- Document Viewer Modal -->
+<div id="doc-modal-overlay">
+  <div id="doc-modal">
+    <div id="doc-modal-header">
+      <span class="modal-title" id="modal-doc-title">Ordinance Document</span>
+      <div class="modal-actions">
+        <a class="modal-btn" id="modal-open-tab" href="#" target="_blank" rel="noopener">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open in New Tab
+        </a>
+        <button class="modal-btn-close" id="modal-close">&times;</button>
+      </div>
+    </div>
+    <div id="doc-modal-body">
+      <div id="doc-modal-loading">Loading document…</div>
+      <iframe id="doc-iframe" title="Ordinance Document"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/layers/FeatureLayer",
+  "esri/widgets/ScaleBar",
+  "esri/widgets/Zoom",
+  "esri/widgets/Home",
+  "esri/widgets/BasemapToggle"
+], function(Map, MapView, FeatureLayer, ScaleBar, Zoom, Home, BasemapToggle) {
+
+  // ═══════════════════════════════════════════
+  // CONFIG
+  // ═══════════════════════════════════════════
+  var ANNEX_ITEM_ID = "dbb249dafb134b28a4ebaac2c531783e";
+  var PARCEL_ITEM_ID = "bd5079b30310433998c6a54652074dd6";
+  var CIVIC_PLUS_BASE = "https://www.fairoaksranchtx.org/DocumentCenter/View/";
+  var SQ_FT_PER_ACRE = 43560;
+
+  // Era color scheme
+  var ERA_COLORS = {
+    "1970s": { fill: [91,155,213,0.40],  outline: [61,120,175,1],  hex: "#5B9BD5" },
+    "1980s": { fill: [212,154,78,0.40],  outline: [180,125,55,1],  hex: "#D49A4E" },
+    "1990s": { fill: [90,174,140,0.40],  outline: [60,140,110,1],  hex: "#5AAE8C" },
+    "2000s": { fill: [200,122,110,0.40], outline: [170,95,85,1],   hex: "#C87A6E" },
+    "2010s": { fill: [141,149,108,0.40], outline: [110,118,78,1],  hex: "#8D956C" },
+    "2020s": { fill: [155,126,184,0.40], outline: [125,96,154,1],  hex: "#9B7EB8" },
+    "Unknown": { fill: [170,170,170,0.30], outline: [130,130,130,1], hex: "#AAAAAA" }
+  };
+
+  var ERA_ORDER = ["1970s","1980s","1990s","2000s","2010s","2020s","Unknown"];
+
+  function getEra(dateVal) {
+    if (!dateVal) return "Unknown";
+    var y = new Date(dateVal).getFullYear();
+    if (y < 1980) return "1970s";
+    if (y < 1990) return "1980s";
+    if (y < 2000) return "1990s";
+    if (y < 2010) return "2000s";
+    if (y < 2020) return "2010s";
+    return "2020s";
+  }
+
+  /**
+   * Acreage priority: RecordedAcreage (if populated) → Shape__Area / 43560 → null
+   */
+  function getAcreage(attrs) {
+    if (attrs.RecordedAcreage != null && attrs.RecordedAcreage > 0) {
+      return { value: attrs.RecordedAcreage, calculated: false };
+    }
+    if (attrs.Shape__Area != null && attrs.Shape__Area > 0) {
+      return { value: attrs.Shape__Area / SQ_FT_PER_ACRE, calculated: true };
+    }
+    return null;
+  }
+
+  /**
+   * Display title — avoids "Unnamed Annexation" entirely.
+   * Priority: PropertyName (if meaningful) → "Ordinance {num}" → "Annexation — {year}"
+   */
+  function getDisplayTitle(attrs) {
+    var pn = (attrs.PropertyName || "").trim();
+    // Exclude empty, "unnamed", and generic placeholder names
+    if (pn && !/^unnamed/i.test(pn) && pn.length > 1) {
+      return pn;
+    }
+    var ord = (attrs.OrdinanceNum || attrs.Ordinance || "").trim();
+    if (ord) return "Ordinance " + ord;
+    if (attrs.AnnexDate) {
+      return "Annexation — " + new Date(attrs.AnnexDate).getFullYear();
+    }
+    return "Annexation #" + attrs.OBJECTID;
+  }
+
+  // ═══════════════════════════════════════════
+  // POPUP TEMPLATE
+  // ═══════════════════════════════════════════
+  var popupTemplate = {
+    title: function(feature) {
+      return getDisplayTitle(feature.graphic.attributes);
+    },
+    outFields: ["*"],
+    content: function(feature) {
+      var a = feature.graphic.attributes;
+      var annDate = a.AnnexDate ? new Date(a.AnnexDate).toLocaleDateString("en-US", {
+        year: "numeric", month: "long", day: "numeric"
+      }) : "Not recorded";
+      var effDate = a.EffectiveDate ? new Date(a.EffectiveDate).toLocaleDateString("en-US", {
+        year: "numeric", month: "long", day: "numeric"
+      }) : null;
+
+      var acreInfo = getAcreage(a);
+      var acreDisplay = "—";
+      if (acreInfo) {
+        acreDisplay = acreInfo.value.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " ac";
+        if (acreInfo.calculated) {
+          acreDisplay += ' <span class="popup-calc-note">(from geometry)</span>';
+        }
+      }
+
+      var civicId = (a.CivicPlusID || "").trim();
+      var ord = a.OrdinanceNum || a.Ordinance || "—";
+
+      var html = '<div class="popup-body">';
+      html += mkRow("Ordinance", ord);
+      html += mkRow("Annexation Date", annDate);
+      if (effDate) html += mkRow("Effective Date", effDate);
+      html += mkRow("Acreage", acreDisplay);
+      if (a.County) html += mkRow("County", a.County);
+      if (a.AnnexationType) html += mkRow("Type", a.AnnexationType);
+      if (a.Mayor) html += mkRow("Mayor", a.Mayor);
+      if (a.Description && a.Description.trim()) html += mkRow("Description", a.Description);
+      if (a.Notes && a.Notes.trim()) html += mkRow("Notes", a.Notes);
+      html += '</div>';
+
+      if (civicId) {
+        var docUrl = CIVIC_PLUS_BASE + civicId;
+        html += '<a class="popup-doc-link" data-doc-url="' + docUrl + '" data-doc-title="Ordinance ' + ord + '" onclick="window._openDocViewer(this); return false;" href="' + docUrl + '">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
+          'View Ordinance Document</a>';
+      } else {
+        html += '<div class="popup-doc-unavailable">Ordinance document not yet linked</div>';
+      }
+
+      return html;
+    }
+  };
+
+  function mkRow(label, value) {
+    return '<div class="popup-row"><span class="popup-label">' + label + '</span><span class="popup-value">' + value + '</span></div>';
+  }
+
+  // ═══════════════════════════════════════════
+  // RENDERER — era-based unique values via Arcade
+  // ═══════════════════════════════════════════
+  var renderer = {
+    type: "unique-value",
+    valueExpression: [
+      'var d = $feature.AnnexDate;',
+      'if (IsEmpty(d)) return "Unknown";',
+      'var y = Year(d);',
+      'if (y < 1980) return "1970s";',
+      'if (y < 1990) return "1980s";',
+      'if (y < 2000) return "1990s";',
+      'if (y < 2010) return "2000s";',
+      'if (y < 2020) return "2010s";',
+      'return "2020s";'
+    ].join("\n"),
+    defaultSymbol: {
+      type: "simple-fill",
+      color: ERA_COLORS["Unknown"].fill,
+      outline: { color: ERA_COLORS["Unknown"].outline, width: 1.2 }
+    },
+    defaultLabel: "Unknown",
+    uniqueValueInfos: ERA_ORDER.filter(function(e) { return e !== "Unknown"; }).map(function(era) {
+      var c = ERA_COLORS[era];
+      return {
+        value: era, label: era,
+        symbol: { type: "simple-fill", color: c.fill, outline: { color: c.outline, width: 1.4 } }
+      };
+    })
+  };
+
+  // ═══════════════════════════════════════════
+  // LABELS — year + ordinance number
+  // ═══════════════════════════════════════════
+  var labelClass = {
+    labelExpressionInfo: {
+      expression: [
+        'var d = $feature.AnnexDate;',
+        'var ord = $feature.OrdinanceNum;',
+        'var parts = [];',
+        'if (!IsEmpty(d)) { parts[Count(parts)] = Text(d, "YYYY"); }',
+        'if (!IsEmpty(ord)) { parts[Count(parts)] = ord; }',
+        'return Concatenate(parts, TextFormatting.NewLine);'
+      ].join("\n")
+    },
+    symbol: {
+      type: "text",
+      color: [27, 58, 45, 0.9],
+      haloColor: [255, 255, 255, 0.85],
+      haloSize: 1.5,
+      font: { size: 9, family: "DM Sans", weight: "bold" }
+    },
+    labelPlacement: "always-horizontal",
+    deconflictionStrategy: "none",
+    minScale: 40000
+  };
+
+  // ═══════════════════════════════════════════
+  // LAYERS
+  // ═══════════════════════════════════════════
+
+  // Parcels — subtle reference underneath
+  var parcelLayer = new FeatureLayer({
+    portalItem: { id: PARCEL_ITEM_ID },
+    title: "Parcels",
+    opacity: 0.35,
+    renderer: {
+      type: "simple",
+      symbol: {
+        type: "simple-fill",
+        color: [0, 0, 0, 0],
+        outline: { color: [100, 100, 100, 0.4], width: 0.5 }
+      }
+    },
+    outFields: ["SiteAddress", "OBJECTID"],
+    labelingInfo: [],
+    popupEnabled: false,
+    listMode: "hide"
+  });
+
+  // Annexation layer
+  var annexLayer = new FeatureLayer({
+    portalItem: { id: ANNEX_ITEM_ID },
+    outFields: ["*"],
+    renderer: renderer,
+    labelingInfo: [labelClass],
+    popupTemplate: popupTemplate,
+    title: "Annexation History"
+  });
+
+  // ═══════════════════════════════════════════
+  // MAP & VIEW
+  // ═══════════════════════════════════════════
+  var map = new Map({
+    basemap: "gray-vector",
+    layers: [parcelLayer, annexLayer]
+  });
+
+  var view = new MapView({
+    container: "viewDiv",
+    map: map,
+    center: [-98.69, 29.745],
+    zoom: 13,
+    constraints: { minZoom: 11, maxZoom: 19 },
+    popup: {
+      dockEnabled: true,
+      dockOptions: { position: "bottom-right", breakpoint: false }
+    },
+    ui: { components: ["attribution"] }
+  });
+
+  // Widgets
+  view.ui.add(new Zoom({ view: view }), "bottom-right");
+  view.ui.add(new Home({ view: view }), "bottom-right");
+  view.ui.add(new ScaleBar({ view: view, unit: "dual", style: "ruler" }), "bottom-left");
+  view.ui.add(new BasemapToggle({ view: view, nextBasemap: "satellite" }), "top-right");
+
+  // ═══════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════
+  var allFeatures = [];
+  var visibleFeatures = [];  // controlled by time slider
+  var minYear = 9999, maxYear = 0;
+  var activeEraFilter = null;
+  var searchMode = "annex";
+  var addressDebounce = null;
+
+  // ═══════════════════════════════════════════
+  // INITIALIZATION
+  // ═══════════════════════════════════════════
+  view.when(function() {
+    annexLayer.when(function() {
+      return annexLayer.queryExtent();
+    }).then(function(result) {
+      if (result.extent) {
+        view.goTo(result.extent.expand(1.15), { duration: 1000 });
+      }
+    });
+
+    // Load all features for sidebar
+    annexLayer.queryFeatures({
+      where: "1=1",
+      outFields: ["*"],
+      returnGeometry: true,
+      orderByFields: ["AnnexDate DESC"]
+    }).then(function(results) {
+      allFeatures = results.features;
+
+      // Determine global year range
+      allFeatures.forEach(function(f) {
+        if (f.attributes.AnnexDate) {
+          var yr = new Date(f.attributes.AnnexDate).getFullYear();
+          if (yr < minYear) minYear = yr;
+          if (yr > maxYear) maxYear = yr;
+        }
+      });
+
+      visibleFeatures = allFeatures.slice();
+      initSlider();
+      rebuildSidebar();
+      document.getElementById("loading-overlay").classList.add("hidden");
+    }).catch(function(err) {
+      console.error("Query error:", err);
+      document.getElementById("loading-overlay").classList.add("hidden");
+    });
+  });
+
+  // ═══════════════════════════════════════════
+  // SIDEBAR — ALL DRIVEN BY visibleFeatures
+  // ═══════════════════════════════════════════
+  function rebuildSidebar() {
+    updateStats(visibleFeatures);
+    updateLegend(visibleFeatures);
+    renderList(applyLocalFilters(visibleFeatures));
+  }
+
+  function updateStats(features) {
+    var totalAcres = 0;
+    var earliest = 9999, latest = 0;
+
+    features.forEach(function(f) {
+      var acreInfo = getAcreage(f.attributes);
+      if (acreInfo) totalAcres += acreInfo.value;
+      if (f.attributes.AnnexDate) {
+        var yr = new Date(f.attributes.AnnexDate).getFullYear();
+        if (yr < earliest) earliest = yr;
+        if (yr > latest) latest = yr;
+      }
+    });
+
+    document.getElementById("stat-total").textContent = features.length;
+    document.getElementById("stat-earliest").textContent = earliest < 9999 ? earliest : "—";
+    document.getElementById("stat-latest").textContent = latest > 0 ? latest : "—";
+    document.getElementById("stat-acres").textContent = totalAcres > 0 ?
+      Math.round(totalAcres).toLocaleString() : "—";
+  }
+
+  function updateLegend(features) {
+    // Count eras in visible (time-filtered) set
+    var eraCounts = {};
+    features.forEach(function(f) {
+      var era = getEra(f.attributes.AnnexDate);
+      eraCounts[era] = (eraCounts[era] || 0) + 1;
+    });
+
+    // Count eras in full dataset (for presence)
+    var fullEraCounts = {};
+    allFeatures.forEach(function(f) {
+      var era = getEra(f.attributes.AnnexDate);
+      fullEraCounts[era] = (fullEraCounts[era] || 0) + 1;
+    });
+
+    var container = document.getElementById("legend-container");
+    container.innerHTML = "";
+
+    ERA_ORDER.forEach(function(era) {
+      if (!fullEraCounts[era]) return; // era doesn't exist at all
+
+      var count = eraCounts[era] || 0;
+      var c = ERA_COLORS[era];
+      var div = document.createElement("div");
+      var classes = "legend-era";
+      if (count === 0) classes += " dimmed";
+      if (activeEraFilter === era) classes += " active-era";
+      div.className = classes;
+      div.innerHTML = '<div class="legend-swatch" style="background:' + c.hex + '"></div>' +
+        '<span class="legend-label">' + era + '</span>' +
+        '<span class="legend-count">' + count + '</span>';
+      div.onclick = function() {
+        activeEraFilter = (activeEraFilter === era) ? null : era;
+        rebuildSidebar();
+      };
+      container.appendChild(div);
+    });
+  }
+
+  /**
+   * Apply search text and era filter on top of the time-slider-filtered set
+   */
+  function applyLocalFilters(features) {
+    var list = features;
+
+    // Era filter
+    if (activeEraFilter) {
+      list = list.filter(function(f) {
+        return getEra(f.attributes.AnnexDate) === activeEraFilter;
+      });
+    }
+
+    // Text search (annexation mode only)
+    if (searchMode === "annex") {
+      var q = document.getElementById("search-input").value.toLowerCase().trim();
+      if (q) {
+        list = list.filter(function(f) {
+          var a = f.attributes;
+          var haystack = [
+            a.PropertyName, a.OrdinanceNum, a.Ordinance, a.Description,
+            a.County, a.Mayor, a.AnnexationType, a.Notes,
+            a.AnnexDate ? new Date(a.AnnexDate).getFullYear().toString() : ""
+          ].filter(Boolean).join(" ").toLowerCase();
+          return haystack.indexOf(q) !== -1;
+        });
+      }
+    }
+
+    // Update section title
+    updateListTitle(list.length);
+    return list;
+  }
+
+  function updateListTitle(count) {
+    var title = document.getElementById("list-title");
+    var sliderVal = parseInt(document.getElementById("time-slider").value);
+    var sliderMax = parseInt(document.getElementById("time-slider").max);
+
+    if (sliderVal < sliderMax && activeEraFilter) {
+      title.textContent = activeEraFilter + " through " + sliderVal + " (" + count + ")";
+    } else if (sliderVal < sliderMax) {
+      title.textContent = "Through " + sliderVal + " (" + count + ")";
+    } else if (activeEraFilter) {
+      title.textContent = activeEraFilter + " Annexations (" + count + ")";
+    } else {
+      title.textContent = "All Annexations (" + count + ")";
+    }
+  }
+
+  function renderList(features) {
+    var list = document.getElementById("annex-list");
+    list.innerHTML = "";
+
+    if (features.length === 0) {
+      list.innerHTML = '<div class="no-results">No annexations match your filters.</div>';
+      return;
+    }
+
+    features.forEach(function(f) {
+      var a = f.attributes;
+      var dateStr = a.AnnexDate ? new Date(a.AnnexDate).getFullYear() : "N/A";
+      var title = getDisplayTitle(a);
+      var ord = a.OrdinanceNum || a.Ordinance || "—";
+      var era = getEra(a.AnnexDate);
+      var color = ERA_COLORS[era] || ERA_COLORS["Unknown"];
+      var acreInfo = getAcreage(a);
+      var acreStr = "";
+      if (acreInfo) {
+        acreStr = acreInfo.value.toFixed(1) + " ac";
+        if (acreInfo.calculated) acreStr += "*";
+      }
+
+      var div = document.createElement("div");
+      div.className = "annex-item";
+      div.style.borderLeft = "4px solid " + color.hex;
+      div.innerHTML = '<div class="annex-name">' + escHtml(title) + '</div>' +
+        '<div class="annex-meta">' +
+        '<span>📅 ' + dateStr + '</span>' +
+        '<span>📋 ' + escHtml(ord) + '</span>' +
+        (acreStr ? '<span>📐 ' + acreStr + '</span>' : '') +
+        '</div>';
+
+      div.addEventListener("click", function() {
+        document.querySelectorAll(".annex-item.active").forEach(function(el) {
+          el.classList.remove("active");
+        });
+        div.classList.add("active");
+        if (f.geometry) {
+          view.goTo({ target: f.geometry, zoom: 16 }, { duration: 600 });
+          view.openPopup({ features: [f], location: f.geometry.centroid });
+        }
+      });
+
+      list.appendChild(div);
+    });
+  }
+
+  function escHtml(str) {
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ═══════════════════════════════════════════
+  // SEARCH — DUAL MODE
+  // ═══════════════════════════════════════════
+
+  // Tab switching
+  document.querySelectorAll(".search-tab").forEach(function(tab) {
+    tab.addEventListener("click", function() {
+      document.querySelectorAll(".search-tab").forEach(function(t) { t.classList.remove("active"); });
+      tab.classList.add("active");
+      searchMode = tab.getAttribute("data-mode");
+      var input = document.getElementById("search-input");
+      var hint = document.getElementById("search-hint");
+      input.value = "";
+      document.getElementById("address-results").classList.remove("visible");
+
+      if (searchMode === "annex") {
+        input.placeholder = "Search by ordinance or year…";
+        hint.textContent = "Filter the annexation list below";
+      } else {
+        input.placeholder = "Type an address to find its annexation…";
+        hint.textContent = "Searches parcel addresses within city limits";
+      }
+      renderList(applyLocalFilters(visibleFeatures));
+    });
+  });
+
+  // Input handler
+  document.getElementById("search-input").addEventListener("input", function(e) {
+    if (searchMode === "annex") {
+      renderList(applyLocalFilters(visibleFeatures));
+    } else {
+      clearTimeout(addressDebounce);
+      var q = e.target.value.trim();
+      if (q.length < 3) {
+        document.getElementById("address-results").classList.remove("visible");
+        return;
+      }
+      addressDebounce = setTimeout(function() { searchAddress(q); }, 400);
+    }
+  });
+
+  function searchAddress(query) {
+    var escaped = query.replace(/'/g, "''").toUpperCase();
+    parcelLayer.queryFeatures({
+      where: "UPPER(SiteAddress) LIKE '%" + escaped + "%'",
+      outFields: ["SiteAddress", "OBJECTID"],
+      returnGeometry: true,
+      num: 10,
+      orderByFields: ["SiteAddress ASC"]
+    }).then(function(results) {
+      var container = document.getElementById("address-results");
+      container.innerHTML = "";
+
+      if (results.features.length === 0) {
+        container.innerHTML = '<div class="address-result-item" style="color:var(--text-muted);font-style:italic">No matching addresses found</div>';
+        container.classList.add("visible");
+        return;
+      }
+
+      results.features.forEach(function(parcel) {
+        var addr = parcel.attributes.SiteAddress || "Unknown";
+        var item = document.createElement("div");
+        item.className = "address-result-item";
+        item.textContent = addr;
+        item.addEventListener("click", function() {
+          container.classList.remove("visible");
+          document.getElementById("search-input").value = addr;
+          highlightParcelAnnexation(parcel);
+        });
+        container.appendChild(item);
+      });
+
+      container.classList.add("visible");
+    }).catch(function(err) {
+      console.error("Address search error:", err);
+    });
+  }
+
+  function highlightParcelAnnexation(parcel) {
+    if (!parcel.geometry) return;
+
+    var centerPt = parcel.geometry.centroid || parcel.geometry.extent.center;
+    view.goTo({ target: parcel.geometry, zoom: 17 }, { duration: 600 });
+
+    // Spatial query: which annexation polygon contains this parcel?
+    annexLayer.queryFeatures({
+      geometry: centerPt,
+      spatialRelationship: "intersects",
+      outFields: ["*"],
+      returnGeometry: true
+    }).then(function(results) {
+      if (results.features.length > 0) {
+        view.openPopup({
+          features: [results.features[0]],
+          location: centerPt
+        });
+      } else {
+        view.openPopup({
+          title: "Outside Annexed Area",
+          content: "This parcel does not fall within a recorded annexation boundary.",
+          location: centerPt
+        });
+      }
+    });
+  }
+
+  // Close address dropdown on outside click
+  document.addEventListener("click", function(e) {
+    if (!e.target.closest(".search-input-wrap")) {
+      document.getElementById("address-results").classList.remove("visible");
+    }
+  });
+
+  // ═══════════════════════════════════════════
+  // TIME SLIDER — MASTER CONTROLLER
+  // Updates: map definitionExpression, visibleFeatures,
+  //          stats, legend, and list
+  // ═══════════════════════════════════════════
+  function initSlider() {
+    var sMin = minYear < 9999 ? minYear : 1970;
+    var sMax = maxYear > 0 ? maxYear : 2026;
+    var slider = document.getElementById("time-slider");
+    slider.min = sMin;
+    slider.max = sMax;
+    slider.value = sMax;
+    document.getElementById("range-min").textContent = sMin;
+    document.getElementById("range-max").textContent = sMax;
+  }
+
+  document.getElementById("time-slider").addEventListener("input", function() {
+    applyTimeFilter();
+  });
+
+  document.getElementById("btn-show-all").addEventListener("click", function() {
+    var slider = document.getElementById("time-slider");
+    slider.value = slider.max;
+    activeEraFilter = null;
+    applyTimeFilter();
+  });
+
+  function applyTimeFilter() {
+    var slider = document.getElementById("time-slider");
+    var yr = parseInt(slider.value);
+    var sMax = parseInt(slider.max);
+    var sliderValue = document.getElementById("slider-value");
+
+    if (yr >= sMax) {
+      sliderValue.textContent = "All Years";
+      annexLayer.definitionExpression = null;
+      visibleFeatures = allFeatures.slice();
+    } else {
+      sliderValue.textContent = "Through " + yr;
+      annexLayer.definitionExpression = "AnnexDate <= DATE '" + yr + "-12-31' OR AnnexDate IS NULL";
+      visibleFeatures = allFeatures.filter(function(f) {
+        var d = f.attributes.AnnexDate;
+        if (!d) return true;
+        return new Date(d).getFullYear() <= yr;
+      });
+    }
+
+    // Rebuild entire sidebar from new visible set
+    rebuildSidebar();
+  }
+
+  // ═══════════════════════════════════════════
+  // DOCUMENT VIEWER MODAL
+  // ═══════════════════════════════════════════
+  var modalOverlay = document.getElementById("doc-modal-overlay");
+  var modalIframe = document.getElementById("doc-iframe");
+  var modalLoading = document.getElementById("doc-modal-loading");
+
+  window._openDocViewer = function(el) {
+    var url = el.getAttribute("data-doc-url");
+    var title = el.getAttribute("data-doc-title") || "Ordinance Document";
+
+    document.getElementById("modal-doc-title").textContent = title;
+    document.getElementById("modal-open-tab").href = url;
+
+    modalLoading.style.display = "flex";
+    modalIframe.style.display = "none";
+    modalIframe.src = url;
+
+    modalIframe.onload = function() {
+      modalLoading.style.display = "none";
+      modalIframe.style.display = "block";
+    };
+
+    modalOverlay.classList.add("visible");
+    view.popup.close();
+  };
+
+  function closeModal() {
+    modalOverlay.classList.remove("visible");
+    modalIframe.src = "about:blank";
+  }
+
+  document.getElementById("modal-close").addEventListener("click", closeModal);
+  modalOverlay.addEventListener("click", function(e) {
+    if (e.target === modalOverlay) closeModal();
+  });
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape" && modalOverlay.classList.contains("visible")) closeModal();
+  });
+
+});
+</script>
+</body>
+</html>
