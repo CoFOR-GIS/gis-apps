@@ -136,7 +136,7 @@ main{flex:1;display:flex;min-height:0}
    ===================================================================== */
 const ORG = "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services";
 const APP_CONFIG = {
-  oauthAppId: "DhZk7VoirUPP4Sa2",
+  oauthAppId: "PASTE_APP_ID_HERE",
   portalUrl:  "https://www.arcgis.com",   // or https://<org>.maps.arcgis.com
   mapCenter:  [-98.643, 29.746],
   mapZoom:    13,
@@ -154,9 +154,9 @@ require([
   "esri/identity/OAuthInfo","esri/identity/IdentityManager",
   "esri/Map","esri/views/MapView","esri/layers/FeatureLayer",
   "esri/widgets/Editor","esri/widgets/Home","esri/widgets/Locate",
-  "esri/widgets/ScaleBar"
+  "esri/widgets/ScaleBar","esri/widgets/BasemapToggle"
 ], (OAuthInfo, esriId, Map, MapView, FeatureLayer,
-    Editor, Home, Locate, ScaleBar) => {
+    Editor, Home, Locate, ScaleBar, BasemapToggle) => {
 
   const info = new OAuthInfo({
     appId: APP_CONFIG.oauthAppId,
@@ -225,6 +225,7 @@ require([
       center:APP_CONFIG.mapCenter, zoom:APP_CONFIG.mapZoom});
     view.ui.add(new Home({view}), "top-left");
     view.ui.add(new Locate({view}), "top-left");
+    view.ui.add(new BasemapToggle({view, nextBasemap:"hybrid"}), "bottom-left");
     view.ui.add(new ScaleBar({view, unit:"dual"}), "bottom-right");
 
     // Editor widget: templates + fields come straight from the service
