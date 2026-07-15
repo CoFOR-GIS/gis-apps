@@ -45,7 +45,9 @@ a{color:#8FC1FF}
 </head>
 <body>
 <div class="wrap">
-<a class="back" href="eoc_editor_map.html">← Back to the editor map</a>
+<a class="back" href="./"
+   onclick="if(window.opener||history.length<=1){window.close();return false;}">
+   ✕ Close guide (return to the editor map)</a>
 <header>
   <small>City of Fair Oaks Ranch · Emergency Operations · Internal</small>
   <h1>EOC Editor — Staff Guide</h1>
@@ -161,8 +163,9 @@ the city's incident history and are used for after-action review.</div>
 
 <h2>7 · Quick reference</h2>
 <ul>
-  <li>Public page: <a href="emergency_landing_page.html">Emergency
-      Notification landing page</a> (also linked from the city website)</li>
+  <li>Public page: <a href="https://cofor-gis.github.io/Emergency/"
+      target="_blank" rel="noopener">Emergency Notification landing
+      page</a> (also linked from the city website)</li>
   <li>One point per incident · plain language · Instructions field always
       filled for anything Level 2 and up</li>
   <li>Resolve, don't delete</li>
