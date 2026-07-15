@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EOC Incident Editor — City of Fair Oaks Ranch (Internal)</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
+<script src="https://js.arcgis.com/4.31/"></script>
+
+<style>
+:root{
+  --ink:#101B2D; --slate:#1C2A40; --line:#2E4160;
+  --paper:#F4F6F9; --muted:#9DB0CC; --oak:#4A6B4F;
+  --sev1:#F2B705; --sev2:#E8721C; --sev3:#CE2029; --sev4:#7A0C1F;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Public Sans',system-ui,sans-serif;background:var(--ink);
+  color:var(--paper);display:flex;flex-direction:column;overflow:hidden}
+
+header{display:flex;align-items:center;gap:14px;padding:10px 18px;
+  border-bottom:1px solid var(--line);flex:none}
+.seal{width:38px;height:38px;border-radius:50%;background:var(--oak);
+  display:grid;place-items:center;font-family:'Barlow Condensed';
+  font-weight:700;font-size:14px;flex:none}
+.org small{display:block;color:var(--muted);font-size:11px;
+  text-transform:uppercase;letter-spacing:.14em}
+.org h1{font-family:'Barlow Condensed';font-weight:700;font-size:21px;
+  text-transform:uppercase;letter-spacing:.02em;line-height:1.05}
+.badge{font-family:'Barlow Condensed';font-weight:700;font-size:12px;
+  letter-spacing:.12em;background:var(--sev3);color:#fff;
+  padding:3px 10px;border-radius:4px;text-transform:uppercase}
+.user{margin-left:auto;display:flex;align-items:center;gap:12px;
+  font-size:12.5px;color:var(--muted)}
+.user b{color:var(--paper)}
+.user button{font:inherit;color:var(--paper);background:var(--slate);
+  border:1px solid var(--line);border-radius:6px;padding:5px 12px;cursor:pointer}
+.user button:hover{border-color:#4E6FA3}
+
+#notice{flex:none;padding:7px 18px;background:var(--slate);
+  border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+#notice b{color:#8BE0A4}
+
+main{flex:1;display:flex;min-height:0}
+#editorPanel{width:380px;flex:none;background:var(--ink);
+  border-right:1px solid var(--line);overflow-y:auto;
+  display:flex;flex-direction:column}
+#editorDiv{flex:1}
+.sevkey{flex:none;padding:10px 16px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.sevkey i{display:inline-block;width:11px;height:11px;border-radius:50%;
+  margin-right:5px;vertical-align:-1px}
+#viewDiv{flex:1;min-width:0}
+
+#gate{position:fixed;inset:0;background:var(--ink);display:grid;
+  place-items:center;z-index:50;text-align:center;padding:24px}
+#gate .box{max-width:420px}
+#gate h2{font-family:'Barlow Condensed';font-weight:700;font-size:26px;
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+#gate p{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:18px}
+#gate button{font:600 15px 'Public Sans';color:#fff;background:var(--oak);
+  border:none;border-radius:8px;padding:11px 26px;cursor:pointer}
+#gate .err{color:#FF8A93;font-size:13px;margin-top:14px}
+
+@media (max-width:820px){
+  main{flex-direction:column}
+  #viewDiv{height:50vh;flex:none;order:0}
+  #editorPanel{width:100%;order:1;border-right:none;
+    border-top:1px solid var(--line);max-height:45vh}
+}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h2>EOC Incident Editor</h2>
+    <p>City of Fair Oaks Ranch — internal use. Sign in with your CoFOR
+       ArcGIS Online account. You must be a member of the
+       <b>CoFOR EOC Editors</b> group.</p>
+    <button id="signInBtn">Sign in with ArcGIS Online</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+</div>
+
+<header>
+  <div class="seal" aria-hidden="true">FOR</div>
+  <div class="org">
+    <small>City of Fair Oaks Ranch · Emergency Operations</small>
+    <h1>EOC Incident Editor</h1>
+  </div>
+  <span class="badge">Internal</span>
+  <div class="user">
+    <span>Signed in as <b id="whoami">…</b></span>
+    <button id="signOutBtn">Sign out</button>
+  </div>
+</header>
+
+<div id="notice">
+  Edits publish to the public landing page within <b>~60 seconds</b>.
+  To close out an incident, set Status = <b>Resolved</b> — do not delete
+  features; resolved records are the incident history.
+</div>
+
+<main>
+  <aside id="editorPanel">
+    <div id="editorDiv"></div>
+    <div class="sevkey">
+      <span><i style="background:var(--sev1)"></i>1 Advisory</span>
+      <span><i style="background:var(--sev2)"></i>2 Watch</span>
+      <span><i style="background:var(--sev3)"></i>3 Warning</span>
+      <span><i style="background:var(--sev4)"></i>4 Emergency</span>
+    </div>
+  </aside>
+  <div id="viewDiv"></div>
+</main>
+
+<script>
+/* =====================================================================
+   APP_CONFIG
+   oauthAppId: register an "Application" item in AGOL (Content > New item
+   > Application > type: Web mapping), then under Settings add BOTH
+   redirect URIs:
+     https://cofor-gis.github.io/gis-apps/eoc_editor_map.html
+     https://<your-iis-host>/gis-apps/eoc_editor_map.html
+   Paste the App ID below. The App ID is not a secret.
+   ===================================================================== */
+const ORG = "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services";
+const APP_CONFIG = {
+  oauthAppId: "PASTE_APP_ID_HERE",
+  portalUrl:  "https://www.arcgis.com",   // or https://<org>.maps.arcgis.com
+  mapCenter:  [-98.643, 29.746],
+  mapZoom:    13,
+
+  // SOURCE service — editable, shared to CoFOR EOC Editors group only
+  incidentsUrl: ORG + "/CoFOREM_Emergency_Operations/FeatureServer/0",
+  closuresUrl:  ORG + "/CoFOREM_Emergency_Operations/FeatureServer/1",
+  areasUrl:     ORG + "/CoFOREM_Emergency_Operations/FeatureServer/2",
+  boundaryUrl:  ORG + "/FOR_Jurisdictional/FeatureServer/0",
+};
+
+const SEV = {1:"#F2B705",2:"#E8721C",3:"#CE2029",4:"#7A0C1F"};
+
+require([
+  "esri/identity/OAuthInfo","esri/identity/IdentityManager",
+  "esri/Map","esri/views/MapView","esri/layers/FeatureLayer",
+  "esri/widgets/Editor","esri/widgets/Home","esri/widgets/Locate",
+  "esri/widgets/ScaleBar"
+], (OAuthInfo, esriId, Map, MapView, FeatureLayer,
+    Editor, Home, Locate, ScaleBar) => {
+
+  const info = new OAuthInfo({
+    appId: APP_CONFIG.oauthAppId,
+    portalUrl: APP_CONFIG.portalUrl,
+    popup: false,            // full-page redirect; simplest on IIS + Pages
+    flowType: "auto"
+  });
+  esriId.registerOAuthInfos([info]);
+
+  const gate    = document.getElementById("gate");
+  const gateErr = document.getElementById("gateErr");
+
+  document.getElementById("signInBtn").addEventListener("click", () =>
+    esriId.getCredential(APP_CONFIG.portalUrl + "/sharing"));
+  document.getElementById("signOutBtn").addEventListener("click", () => {
+    esriId.destroyCredentials();
+    location.reload();
+  });
+
+  esriId.checkSignInStatus(APP_CONFIG.portalUrl + "/sharing")
+    .then(cred => { gate.remove(); start(cred); })
+    .catch(() => {
+      if (APP_CONFIG.oauthAppId === "PASTE_APP_ID_HERE")
+        gateErr.textContent =
+          "OAuth App ID not configured — see APP_CONFIG in this file.";
+      /* stay on gate until user clicks sign in */
+    });
+
+  function start(credential){
+    document.getElementById("whoami").textContent = credential.userId;
+
+    const sevRenderer = (symFn) => ({
+      type:"unique-value", field:"Severity",
+      defaultSymbol:symFn("#5B6B85"),
+      uniqueValueInfos:[1,2,3,4].map(v => ({value:v, symbol:symFn(SEV[v])}))
+    });
+    const pt   = c => ({type:"simple-marker", color:c, size:13,
+                        outline:{color:"#fff", width:1.5}});
+    const poly = c => ({type:"simple-fill",
+      color:[...hex(c), .22], outline:{color:c, width:2}});
+    const hex  = h => { const n=parseInt(h.slice(1),16);
+      return [(n>>16)&255,(n>>8)&255,n&255]; };
+
+    const incidents = new FeatureLayer({
+      url:APP_CONFIG.incidentsUrl, title:"Emergency Incidents",
+      renderer:sevRenderer(pt), outFields:["*"]});
+    const closures = new FeatureLayer({
+      url:APP_CONFIG.closuresUrl, title:"Road Closures",
+      renderer:{type:"simple", symbol:{type:"simple-line",
+        color:"#CE2029", width:4, style:"dash"}}, outFields:["*"]});
+    const areas = new FeatureLayer({
+      url:APP_CONFIG.areasUrl, title:"Affected Areas",
+      renderer:sevRenderer(poly), outFields:["*"]});
+    const boundary = new FeatureLayer({
+      url:APP_CONFIG.boundaryUrl, title:"City Limits",
+      renderer:{type:"simple", symbol:{type:"simple-fill",
+        color:[0,0,0,0], outline:{color:"#4A6B4F", width:2.5}}},
+      popupEnabled:false});
+
+    const map = new Map({
+      basemap:"streets-navigation-vector",
+      layers:[boundary, areas, closures, incidents]});
+
+    const view = new MapView({
+      container:"viewDiv", map,
+      center:APP_CONFIG.mapCenter, zoom:APP_CONFIG.mapZoom});
+    view.ui.add(new Home({view}), "top-left");
+    view.ui.add(new Locate({view}), "top-left");
+    view.ui.add(new ScaleBar({view, unit:"dual"}), "bottom-right");
+
+    // Editor widget: templates + fields come straight from the service
+    // (domains render as dropdowns; editor tracking is automatic).
+    const editor = new Editor({
+      view,
+      container:"editorDiv",
+      snappingOptions:{enabled:true, selfEnabled:true, featureEnabled:true},
+      layerInfos:[
+        {layer:incidents},
+        {layer:closures},
+        {layer:areas},
+        {layer:boundary, enabled:false}
+      ]
+    });
+  }
+});
+</script>
+</body>
+</html>
