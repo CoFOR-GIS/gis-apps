@@ -155,7 +155,7 @@ require([
   "esri/Map","esri/views/MapView","esri/layers/FeatureLayer",
   "esri/widgets/Editor","esri/widgets/Home","esri/widgets/Locate",
   "esri/widgets/ScaleBar","esri/widgets/BasemapToggle"
-], (OAuthInfo, esriId, Map, MapView, FeatureLayer,
+], (OAuthInfo, esriId, EsriMap, MapView, FeatureLayer,
     Editor, Home, Locate, ScaleBar, BasemapToggle) => {
 
   const info = new OAuthInfo({
@@ -216,7 +216,7 @@ require([
         color:[0,0,0,0], outline:{color:"#4A6B4F", width:2.5}}},
       popupEnabled:false});
 
-    const map = new Map({
+    const map = new EsriMap({
       basemap:"streets-navigation-vector",
       layers:[boundary, areas, closures, incidents]});
 
