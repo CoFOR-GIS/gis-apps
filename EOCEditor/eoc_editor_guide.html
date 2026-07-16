@@ -3,246 +3,185 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EOC Incident Editor — City of Fair Oaks Ranch (Internal)</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<title>EOC Editor Guide — City of Fair Oaks Ranch</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
-<script src="https://js.arcgis.com/4.31/"></script>
-
 <style>
-:root{
-  --ink:#101B2D; --slate:#1C2A40; --line:#2E4160;
-  --paper:#F4F6F9; --muted:#9DB0CC; --oak:#4A6B4F;
-  --sev1:#F2B705; --sev2:#E8721C; --sev3:#CE2029; --sev4:#7A0C1F;
-}
+:root{--ink:#101B2D;--slate:#1C2A40;--line:#2E4160;--paper:#F4F6F9;
+  --muted:#9DB0CC;--oak:#4A6B4F;
+  --sev1:#F2B705;--sev2:#E8721C;--sev3:#CE2029;--sev4:#7A0C1F}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
 body{font-family:'Public Sans',system-ui,sans-serif;background:var(--ink);
-  color:var(--paper);display:flex;flex-direction:column;overflow:hidden}
-
-header{display:flex;align-items:center;gap:14px;padding:10px 18px;
-  border-bottom:1px solid var(--line);flex:none}
-.seal{width:38px;height:38px;border-radius:50%;background:var(--oak);
-  display:grid;place-items:center;font-family:'Barlow Condensed';
-  font-weight:700;font-size:14px;flex:none}
-.org small{display:block;color:var(--muted);font-size:11px;
+  color:var(--paper);line-height:1.65}
+.wrap{max-width:820px;margin:0 auto;padding:28px 22px 60px}
+header{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:26px}
+header small{display:block;color:var(--muted);font-size:12px;
   text-transform:uppercase;letter-spacing:.14em}
-.org h1{font-family:'Barlow Condensed';font-weight:700;font-size:21px;
-  text-transform:uppercase;letter-spacing:.02em;line-height:1.05}
-.badge{font-family:'Barlow Condensed';font-weight:700;font-size:12px;
-  letter-spacing:.12em;background:var(--sev3);color:#fff;
-  padding:3px 10px;border-radius:4px;text-transform:uppercase}
-.user{margin-left:auto;display:flex;align-items:center;gap:12px;
-  font-size:12.5px;color:var(--muted)}
-.user b{color:var(--paper)}
-.user button{font:inherit;color:var(--paper);background:var(--slate);
-  border:1px solid var(--line);border-radius:6px;padding:5px 12px;cursor:pointer}
-.user button:hover{border-color:#4E6FA3}
-.guideBtn{font-size:12.5px;font-weight:600;color:var(--paper);
-  text-decoration:none;background:var(--oak);border-radius:6px;
-  padding:6px 13px}
-.guideBtn:hover{filter:brightness(1.12)}
-
-#notice{flex:none;padding:7px 18px;background:var(--slate);
-  border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted)}
-#notice b{color:#8BE0A4}
-
-main{flex:1;display:flex;min-height:0}
-#editorPanel{width:380px;flex:none;background:var(--ink);
-  border-right:1px solid var(--line);overflow-y:auto;
-  display:flex;flex-direction:column}
-#editorDiv{flex:1}
-.sevkey{flex:none;padding:10px 16px;border-top:1px solid var(--line);
-  font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
-.sevkey i{display:inline-block;width:11px;height:11px;border-radius:50%;
-  margin-right:5px;vertical-align:-1px}
-#viewDiv{flex:1;min-width:0}
-
-#gate{position:fixed;inset:0;background:var(--ink);display:grid;
-  place-items:center;z-index:50;text-align:center;padding:24px}
-#gate .box{max-width:420px}
-#gate h2{font-family:'Barlow Condensed';font-weight:700;font-size:26px;
-  text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-#gate p{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:18px}
-#gate button{font:600 15px 'Public Sans';color:#fff;background:var(--oak);
-  border:none;border-radius:8px;padding:11px 26px;cursor:pointer}
-#gate .err{color:#FF8A93;font-size:13px;margin-top:14px}
-
-@media (max-width:820px){
-  main{flex-direction:column}
-  #viewDiv{height:50vh;flex:none;order:0}
-  #editorPanel{width:100%;order:1;border-right:none;
-    border-top:1px solid var(--line);max-height:45vh}
-}
+h1{font-family:'Barlow Condensed';font-weight:700;font-size:34px;
+  text-transform:uppercase;letter-spacing:.02em}
+h2{font-family:'Barlow Condensed';font-weight:700;font-size:23px;
+  text-transform:uppercase;letter-spacing:.04em;margin:34px 0 10px;
+  color:#CFE0F5}
+p{margin:10px 0;font-size:15px}
+ol,ul{margin:10px 0 10px 22px;font-size:15px}
+li{margin:7px 0}
+b.f{color:#FFD98A}          /* field names */
+.tip{background:var(--slate);border:1px solid var(--line);
+  border-left:5px solid var(--oak);border-radius:8px;padding:12px 15px;
+  margin:14px 0;font-size:14px}
+.warn{border-left-color:var(--sev3)}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;
+  vertical-align:top}
+th{background:var(--slate);font-family:'Barlow Condensed';font-weight:600;
+  text-transform:uppercase;letter-spacing:.06em;font-size:13px}
+.chip{display:inline-block;font-family:'Barlow Condensed';font-weight:700;
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  color:#fff;padding:2px 10px;border-radius:20px}
+a{color:#8FC1FF}
+.back{display:inline-block;margin-bottom:14px;font-size:13px}
+@media print{body{background:#fff;color:#111}
+  .tip{border:1px solid #999}.chip{border:1px solid #999;color:#111}}
 </style>
 </head>
 <body>
-
-<div id="gate">
-  <div class="box">
-    <h2>EOC Incident Editor</h2>
-    <p>City of Fair Oaks Ranch — internal use. Sign in with your CoFOR
-       ArcGIS Online account. You must be a member of the
-       <b>CoFOR EOC Editors</b> group.</p>
-    <button id="signInBtn">Sign in with ArcGIS Online</button>
-    <div class="err" id="gateErr"></div>
-  </div>
-</div>
-
+<div class="wrap">
+<a class="back" href="./"
+   onclick="if(window.opener||history.length<=1){window.close();return false;}">
+   ✕ Close guide (return to the editor map)</a>
 <header>
-  <div class="seal" aria-hidden="true">FOR</div>
-  <div class="org">
-    <small>City of Fair Oaks Ranch · Emergency Operations</small>
-    <h1>EOC Incident Editor</h1>
-  </div>
-  <span class="badge">Internal</span>
-  <div class="user">
-    <a class="guideBtn" href="eoc_editor_guide.html" target="_blank"
-       rel="noopener">Guide</a>
-    <span>Signed in as <b id="whoami">…</b></span>
-    <button id="signOutBtn">Sign out</button>
-  </div>
+  <small>City of Fair Oaks Ranch · Emergency Operations · Internal</small>
+  <h1>EOC Editor — Staff Guide</h1>
+  <p>What you post here appears on the public emergency page within about
+     <b>one minute</b>. Write everything as if a resident is reading it —
+     because they are.</p>
 </header>
 
-<div id="notice">
-  Edits publish to the public landing page within <b>~60 seconds</b>.
-  To close out an incident, set Status = <b>Resolved</b> — do not delete
-  features; resolved records are the incident history.
+<h2>1 · Signing in</h2>
+<ol>
+  <li>Open the editor map and select <b>Sign in with ArcGIS Online</b>.</li>
+  <li>Use your CoFOR ArcGIS account. You must be in the
+      <b>CoFOR EOC Editors</b> group — if sign-in works but layers don't
+      load, contact GIS to be added.</li>
+</ol>
+
+<h2>2 · Posting a new incident</h2>
+<ol>
+  <li>In the editor panel, choose <b>Emergency Incidents</b> and click the
+      map at the incident location. One point per incident.</li>
+  <li>Fill the form. Every field with a dropdown is a pick-list — you never
+      type codes:</li>
+</ol>
+<table>
+  <tr><th>Field</th><th>What to enter</th></tr>
+  <tr><td><b class="f">Incident Name</b></td>
+      <td>The headline residents see. <i>“Boil Water Notice — Pressure
+      Zone 2”</i>, not <i>“BWN PZ2”</i>.</td></tr>
+  <tr><td><b class="f">Incident Type</b></td>
+      <td>Pick the closest match (Flooding, Fire, Water System, Road…).</td></tr>
+  <tr><td><b class="f">Severity Level</b></td>
+      <td>Sets the color of the whole public page — see the table below.</td></tr>
+  <tr><td><b class="f">Status</b></td>
+      <td><b>Active</b> for a live event, <b>Scheduled</b> for planned
+      work, <b>Monitoring</b> for developing situations.</td></tr>
+  <tr><td><b class="f">Public Description</b></td>
+      <td>What happened, 1–3 plain sentences. No radio codes or jargon.</td></tr>
+  <tr><td><b class="f">Protective Action / Instructions</b></td>
+      <td><b>The most important field.</b> Tell residents exactly what to
+      do: <i>“Boil tap water for 2 minutes before drinking or cooking
+      until further notice.”</i></td></tr>
+  <tr><td><b class="f">Location Description</b></td>
+      <td>Where, in words: <i>“Ammann Rd at Cibolo Creek crossing.”</i></td></tr>
+  <tr><td><b class="f">Start / Estimated End</b></td>
+      <td>When it takes effect; honest estimate for the end, or leave the
+      end blank if unknown.</td></tr>
+  <tr><td><b class="f">Issuing Department / Contact / Link</b></td>
+      <td>Your department, the public phone line (non-emergency
+      830-249-8645), and a link to the full notice if one exists.</td></tr>
+</table>
+<ol start="3">
+  <li>If the incident covers an area (boil zone, outage area), sketch it on
+      <b>Affected Areas</b> with the same name, severity, and status.</li>
+  <li>If roads are affected, trace them on <b>Road Closures</b> — set
+      <b class="f">Closure Type</b>, <b class="f">Road Name</b>, and a
+      <b class="f">Detour Description</b>.</li>
+  <li><b>Check your work:</b> open the public page and confirm the banner
+      color and wording within a minute or so.</li>
+</ol>
+<div class="tip"><b>Why the same name matters:</b> the public page groups a
+point, its area, and its closure lines into <b>one notification card</b>
+when they share the same Incident Name. Different names = separate cards.
+A closure line or area with no point still triggers the banner on its own.</div>
+<div class="tip">Use the <b>basemap button</b> in the bottom-left corner of
+the map to switch between streets and aerial imagery — helpful when
+sketching areas or tracing roads.</div>
+
+<h2>3 · Choosing the severity</h2>
+<table>
+  <tr><th>Level</th><th>Use it for</th></tr>
+  <tr><td><span class="chip" style="background:var(--sev1)">1 Advisory</span></td>
+      <td>Planned road work, scheduled maintenance, minor issues with no
+      service impact.</td></tr>
+  <tr><td><span class="chip" style="background:var(--sev2)">2 Watch</span></td>
+      <td>Developing weather, flood watch on the creeks, situations under
+      monitoring, lane closures.</td></tr>
+  <tr><td><span class="chip" style="background:var(--sev3)">3 Warning</span></td>
+      <td>Boil water notice, impassable low water crossing, active road
+      flooding, extended outage, nearby wildfire.</td></tr>
+  <tr><td><span class="chip" style="background:var(--sev4)">4 Emergency</span></td>
+      <td>Evacuation, shelter-in-place, life-safety threat. The public page
+      turns crimson and pulses.</td></tr>
+</table>
+<div class="tip warn"><b>Rule of thumb:</b> Level 4 means a resident should
+stop what they're doing. If you're unsure between two levels during a live
+event, pick the higher one and adjust later.</div>
+
+<h2>4 · Updating an incident</h2>
+<p>Click the feature on the map, edit the fields, save. <b>Never create a
+second point for the same event</b> — update the original. The public page
+shows an “Updated” time automatically. Escalate or de-escalate by changing
+the Severity; the banner follows on the next refresh.</p>
+
+<h2>5 · Closing an incident</h2>
+<ol>
+  <li>Set <b class="f">Status</b> = <b>Resolved</b> on the incident point
+      <i>and</i> any related area or closure features.</li>
+  <li>Everything disappears from the public page automatically. When
+      nothing active remains, the banner returns to green All Clear.</li>
+</ol>
+<div class="tip warn"><b>Do not delete features.</b> Resolved records are
+the city's incident history and are used for after-action review.</div>
+
+<h2>6 · If something looks wrong</h2>
+<table>
+  <tr><th>Problem</th><th>Fix</th></tr>
+  <tr><td>Signed in but can't edit / layers missing</td>
+      <td>You're not in the CoFOR EOC Editors group, or your account role
+      lacks editing — contact GIS.</td></tr>
+  <tr><td>Public page banner is the wrong color</td>
+      <td>A forgotten feature is still Active or Scheduled somewhere —
+      check all three layers for anything not Resolved.</td></tr>
+  <tr><td>Edit isn't showing on the public page</td>
+      <td>Wait a full minute (it refreshes every 60 seconds), then hard-
+      refresh your own browser. Still missing? Contact GIS.</td></tr>
+  <tr><td>Sign-in bounces with an error</td>
+      <td>Usually a redirect/URL issue on GIS's side — report the exact
+      address in your browser bar to GIS.</td></tr>
+  <tr><td>Anything else acting strange</td>
+      <td>Press <b>F12</b>, click <b>Console</b>, and send GIS a screenshot
+      of any red text. That message usually names the exact problem.</td></tr>
+</table>
+
+<h2>7 · Quick reference</h2>
+<ul>
+  <li>Public page: <a href="https://cofor-gis.github.io/Emergency/"
+      target="_blank" rel="noopener">Emergency Notification landing
+      page</a> (also linked from the city website)</li>
+  <li>One point per incident · plain language · Instructions field always
+      filled for anything Level 2 and up</li>
+  <li>Resolve, don't delete</li>
+  <li>Quarterly test: post a <i>“TEST — disregard”</i> Advisory, confirm it
+      appears publicly, then resolve it.</li>
+</ul>
 </div>
-
-<main>
-  <aside id="editorPanel">
-    <div id="editorDiv"></div>
-    <div class="sevkey">
-      <span><i style="background:var(--sev1)"></i>1 Advisory</span>
-      <span><i style="background:var(--sev2)"></i>2 Watch</span>
-      <span><i style="background:var(--sev3)"></i>3 Warning</span>
-      <span><i style="background:var(--sev4)"></i>4 Emergency</span>
-    </div>
-  </aside>
-  <div id="viewDiv"></div>
-</main>
-
-<script>
-/* =====================================================================
-   APP_CONFIG
-   oauthAppId: register an "Application" item in AGOL (Content > New item
-   > Application > type: Web mapping), then under Settings add BOTH
-   redirect URIs:
-     https://cofor-gis.github.io/gis-apps/eoc_editor_map.html
-     https://<your-iis-host>/gis-apps/eoc_editor_map.html
-   Paste the App ID below. The App ID is not a secret.
-   ===================================================================== */
-const ORG = "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services";
-const APP_CONFIG = {
-  oauthAppId: "DhZk7VoirUPP4Sa2",
-  portalUrl:  "https://www.arcgis.com",   // or https://<org>.maps.arcgis.com
-  mapCenter:  [-98.643, 29.746],
-  mapZoom:    13,
-
-  // SOURCE service — editable, shared to CoFOR EOC Editors group only
-  incidentsUrl: ORG + "/CoFOREM_Emergency_Operations/FeatureServer/0",
-  closuresUrl:  ORG + "/CoFOREM_Emergency_Operations/FeatureServer/1",
-  areasUrl:     ORG + "/CoFOREM_Emergency_Operations/FeatureServer/2",
-  boundaryUrl:  ORG + "/FOR_Jurisdictional/FeatureServer/0",
-};
-
-const SEV = {1:"#F2B705",2:"#E8721C",3:"#CE2029",4:"#7A0C1F"};
-
-require([
-  "esri/identity/OAuthInfo","esri/identity/IdentityManager",
-  "esri/Map","esri/views/MapView","esri/layers/FeatureLayer",
-  "esri/widgets/Editor","esri/widgets/Home","esri/widgets/Locate",
-  "esri/widgets/ScaleBar","esri/widgets/BasemapToggle"
-], (OAuthInfo, esriId, EsriMap, MapView, FeatureLayer,
-    Editor, Home, Locate, ScaleBar, BasemapToggle) => {
-
-  const info = new OAuthInfo({
-    appId: APP_CONFIG.oauthAppId,
-    portalUrl: APP_CONFIG.portalUrl,
-    popup: false,            // full-page redirect; simplest on IIS + Pages
-    flowType: "auto"
-  });
-  esriId.registerOAuthInfos([info]);
-
-  const gate    = document.getElementById("gate");
-  const gateErr = document.getElementById("gateErr");
-
-  document.getElementById("signInBtn").addEventListener("click", () =>
-    esriId.getCredential(APP_CONFIG.portalUrl + "/sharing"));
-  document.getElementById("signOutBtn").addEventListener("click", () => {
-    esriId.destroyCredentials();
-    location.reload();
-  });
-
-  esriId.checkSignInStatus(APP_CONFIG.portalUrl + "/sharing")
-    .then(cred => { gate.remove(); start(cred); })
-    .catch(() => {
-      if (APP_CONFIG.oauthAppId === "DhZk7VoirUPP4Sa2")
-        gateErr.textContent =
-          "OAuth App ID not configured — see APP_CONFIG in this file.";
-      /* stay on gate until user clicks sign in */
-    });
-
-  function start(credential){
-    document.getElementById("whoami").textContent = credential.userId;
-
-    const sevRenderer = (symFn) => ({
-      type:"unique-value", field:"Severity",
-      defaultSymbol:symFn("#5B6B85"),
-      uniqueValueInfos:[1,2,3,4].map(v => ({value:v, symbol:symFn(SEV[v])}))
-    });
-    const pt   = c => ({type:"simple-marker", color:c, size:13,
-                        outline:{color:"#fff", width:1.5}});
-    const poly = c => ({type:"simple-fill",
-      color:[...hex(c), .22], outline:{color:c, width:2}});
-    const hex  = h => { const n=parseInt(h.slice(1),16);
-      return [(n>>16)&255,(n>>8)&255,n&255]; };
-
-    const incidents = new FeatureLayer({
-      url:APP_CONFIG.incidentsUrl, title:"Emergency Incidents",
-      renderer:sevRenderer(pt), outFields:["*"]});
-    const closures = new FeatureLayer({
-      url:APP_CONFIG.closuresUrl, title:"Road Closures",
-      renderer:{type:"simple", symbol:{type:"simple-line",
-        color:"#CE2029", width:4, style:"dash"}}, outFields:["*"]});
-    const areas = new FeatureLayer({
-      url:APP_CONFIG.areasUrl, title:"Affected Areas",
-      renderer:sevRenderer(poly), outFields:["*"]});
-    const boundary = new FeatureLayer({
-      url:APP_CONFIG.boundaryUrl, title:"City Limits",
-      renderer:{type:"simple", symbol:{type:"simple-fill",
-        color:[0,0,0,0], outline:{color:"#4A6B4F", width:2.5}}},
-      popupEnabled:false});
-
-    const map = new EsriMap({
-      basemap:"streets-navigation-vector",
-      layers:[boundary, areas, closures, incidents]});
-
-    const view = new MapView({
-      container:"viewDiv", map,
-      center:APP_CONFIG.mapCenter, zoom:APP_CONFIG.mapZoom});
-    view.ui.add(new Home({view}), "top-left");
-    view.ui.add(new Locate({view}), "top-left");
-    view.ui.add(new BasemapToggle({view, nextBasemap:"hybrid"}), "bottom-left");
-    view.ui.add(new ScaleBar({view, unit:"dual"}), "bottom-right");
-
-    // Editor widget: templates + fields come straight from the service
-    // (domains render as dropdowns; editor tracking is automatic).
-    const editor = new Editor({
-      view,
-      container:"editorDiv",
-      snappingOptions:{enabled:true, selfEnabled:true, featureEnabled:true},
-      layerInfos:[
-        {layer:incidents},
-        {layer:closures},
-        {layer:areas},
-        {layer:boundary, enabled:false}
-      ]
-    });
-  }
-});
-</script>
 </body>
 </html>
