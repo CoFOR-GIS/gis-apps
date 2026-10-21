@@ -103,12 +103,16 @@
 const CONFIG = {
   portalUrl: "https://fairoaksranch.maps.arcgis.com",
   appId:     "DhZk7VoirUPP4Sa2",
-  service:   "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services/CoFORPW_CIP_Projects/FeatureServer",
+  // Internal Editing view (Add + Update only, no Delete), shared with the CIP Editors group.
+  // The authoritative CoFORPW_CIP_Projects layer is never shared with editors.
+  service:   "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services/CoFORPW_CIP_Projects_Editing/FeatureServer",
+  // Replaced locations are marked Superseded (GIS deletes them on the authoritative layer)
+  activeWhere: "(ReviewStatus IS NULL OR ReviewStatus <> 'Superseded')",
   jurisdiction: "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services/FOR_Jurisdictional/FeatureServer/0",
   parcels:   "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services/Parcels_View/FeatureServer/0/query",
   keyPrefix: "Project Status Report_",
   // fields never copied when a project moves to a different geometry layer
-  systemFields: ["OBJECTID", "GlobalID", "Shape__Area", "Shape__Length", "CreationDate", "Creator", "EditDate", "Editor"]
+  systemFields: ["OBJECTID", "GlobalID", "Shape__Area", "Shape__Length", "CreationDate", "Creator", "EditDate", "Editor", "ReviewStatus"]
 };
 const LAYER_FOR = { point: 0, polyline: 1, polygon: 2 };
 const LAYER_NAME = ["point", "line", "area"];
@@ -166,7 +170,7 @@ require([
       polygon: { type: "simple-fill", color: [141, 149, 108, 0.25], outline: { color: [25, 39, 55, 0.7], width: 1 } }
     };
     const layers = [0, 1, 2].map((i) => new FeatureLayer({
-      url: CONFIG.service + "/" + i, outFields: ["*"], title: "CIP " + LAYER_NAME[i],
+      url: CONFIG.service + "/" + i, outFields: ["*"], title: "CIP " + LAYER_NAME[i], definitionExpression: CONFIG.activeWhere,
       renderer: { type: "simple", symbol: [sym.point, sym.line, sym.polygon][i] },
       popupTemplate: { title: "{ProjectName}", content: "{Category} · {Phase} · {HealthStatus}" }
     }));
@@ -210,7 +214,7 @@ require([
         msg($("keyMsg"), "That doesn't look like a PSR file name (Project Status Report_….xlsx). Saving with a wrong key creates an orphan that never syncs.", "err");
       } else if (!$("key").readOnly) { msg($("keyMsg"), ""); }
       $("existing").textContent = "Loading…";
-      const where = "ProjectKey = " + sqlStr(k);
+      const where = "ProjectKey = " + sqlStr(k) + " AND " + CONFIG.activeWhere;
       let results;
       try {
         results = await Promise.all(layers.map((lyr, i) =>
@@ -308,7 +312,7 @@ require([
       if (!cat) return msg($("msg"), "Choose a Category.", "err");
       if (!geom) return msg($("msg"), "Draw a pin, line or area first.", "err");
       const target = LAYER_FOR[geom.type];
-      if (existing.length > 1 && !confirm("This replaces " + existing.length + " existing features with one " + LAYER_NAME[target] + ". Continue?")) return;
+      if (existing.length > 1 && !confirm("This replaces " + existing.length + " existing features with one " + LAYER_NAME[target] + ". The old ones are retired for GIS to remove. Continue?")) return;
 
       $("btnSave").disabled = true; msg($("msg"), "Saving…", "info");
       try {
@@ -317,16 +321,18 @@ require([
           // Same geometry type: update in place (keeps GlobalID, edit history and synced attributes)
           const f = existing[0].feature, oidField = layers[target].objectIdField;
           const res = await layers[target].applyEdits({ updateFeatures: [new Graphic({ geometry: geom,
-            attributes: { [oidField]: f.attributes[oidField], ProjectName: name, Category: cat } })] });
+            attributes: { [oidField]: f.attributes[oidField], ProjectName: name, Category: cat, ReviewStatus: "Pending Review" } })] });
           const r = res.updateFeatureResults[0];
           if (r.error) throw r.error;
         } else {
-          // New project, or switching geometry type: add first, delete old only if the add succeeded
+          // New project, or switching geometry type: add first; only if the add succeeded, mark the
+          // old feature(s) Superseded. The editing view has no Delete; GIS removes superseded
+          // features on the authoritative layer, and the Public View already hides them.
           const attrs = {};
           if (existing.length) {
             Object.entries(existing[0].feature.attributes).forEach(([k2, v]) => { if (!CONFIG.systemFields.includes(k2)) attrs[k2] = v; });
           }
-          Object.assign(attrs, { ProjectKey: k, ProjectName: name, Category: cat });
+          Object.assign(attrs, { ProjectKey: k, ProjectName: name, Category: cat, ReviewStatus: "Pending Review" });
           if (!attrs.Lifecycle) attrs.Lifecycle = "Active";
           const add = await layers[target].applyEdits({ addFeatures: [new Graphic({ geometry: geom, attributes: attrs })] });
           const ar = add.addFeatureResults[0];
@@ -334,9 +340,10 @@ require([
           for (const i of [0, 1, 2]) {
             const ids = existing.filter((e) => e.layerIndex === i).map((e) => e.feature.attributes[layers[i].objectIdField]);
             if (!ids.length) continue;
-            const del = await layers[i].applyEdits({ deleteFeatures: ids.map((id) => ({ objectId: id })) });
-            const bad = del.deleteFeatureResults.filter((d) => d.error);
-            if (bad.length) throw new Error("New location saved, but " + bad.length + " old feature(s) could not be removed. Tell GIS.");
+            const oid = layers[i].objectIdField;
+            const upd = await layers[i].applyEdits({ updateFeatures: ids.map((id) => new Graphic({ attributes: { [oid]: id, ReviewStatus: "Superseded" } })) });
+            const bad = upd.updateFeatureResults.filter((d) => d.error);
+            if (bad.length) throw new Error("New location saved, but " + bad.length + " old feature(s) could not be retired. Tell GIS.");
           }
         }
         msg($("msg"), "Saved. GIS will review the location; project details fill in on the next sync.", "ok");
