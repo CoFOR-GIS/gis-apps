@@ -218,7 +218,9 @@ require([
             .then((fs) => fs.features.map((f) => ({ layerIndex: i, feature: f })))));
       } catch (e) {
         // The authoritative service is not public: no access usually means "not in CIP Editors"
-        $("existing").textContent = "Couldn't read the CIP project layers. Ask GIS to add you to the CIP editors group.";
+        const why = (e && (e.message || (e.details && e.details.message))) || String(e);
+        $("existing").textContent = "Couldn't read the CIP project layers. Your account may not have access yet; " +
+          "ask GIS to check that you're in CIP Editors and that the CIP service is shared with that group. (" + why + ")";
         updateSave(); return;
       }
       existing = results.flat();
