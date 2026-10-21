@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CIP Locator | City of Fair Oaks Ranch</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://js.arcgis.com/4.34/esri/themes/light/main.css">
+<style>
+  :root { --navy:#192737; --olive:#8d956c; --bg:#f5f6f3; --line:#d9dccf; --err:#a64850; --ok:#4f6b3a; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; font-family:"Segoe UI", Arial, sans-serif; color:var(--navy); background:var(--bg); }
+  header { height:56px; display:flex; align-items:center; gap:12px; padding:0 16px; background:var(--navy); color:#fff; }
+  header img { height:38px; }
+  header h1 { font-size:18px; margin:0; font-weight:600; }
+  header .user { margin-left:auto; font-size:13px; opacity:.85; }
+  main { display:flex; height:calc(100% - 56px); }
+  aside { width:360px; min-width:300px; overflow-y:auto; padding:14px; background:#fff; border-right:1px solid var(--line); }
+  #map { flex:1; }
+  section { margin-bottom:16px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--olive); margin:0 0 8px; }
+  label { display:block; font-size:12px; font-weight:600; margin:8px 0 3px; }
+  input, select { width:100%; padding:7px 8px; font-size:14px; border:1px solid var(--line); border-radius:4px; }
+  input[readonly] { background:#f1f2ee; color:#555; }
+  .row { display:flex; gap:6px; }
+  button { cursor:pointer; padding:8px 10px; font-size:13px; border-radius:4px; border:1px solid var(--navy); background:#fff; color:var(--navy); }
+  button.primary { background:var(--navy); color:#fff; width:100%; padding:10px; font-size:15px; }
+  button.active { background:var(--olive); border-color:var(--olive); color:#fff; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .tools button { flex:1; }
+  .note { font-size:12px; color:#555; line-height:1.4; }
+  .msg { font-size:13px; padding:8px 10px; border-radius:4px; margin-top:8px; display:none; line-height:1.4; }
+  .msg.err { display:block; background:#f7e9ea; color:var(--err); }
+  .msg.ok { display:block; background:#eef3e8; color:var(--ok); }
+  .msg.info { display:block; background:#eef1f5; color:var(--navy); }
+  #results div { padding:6px 8px; border-bottom:1px solid var(--line); cursor:pointer; font-size:13px; }
+  #results div:hover { background:var(--bg); }
+  .existing { font-size:13px; background:var(--bg); border:1px solid var(--line); border-radius:4px; padding:8px; }
+  @media (max-width: 760px) { main { flex-direction:column; } aside { width:100%; height:48%; border-right:0; border-bottom:1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <img src="logo.svg" alt="City of Fair Oaks Ranch">
+  <h1>CIP Locator</h1>
+  <span class="user" id="user"></span>
+</header>
+<main>
+  <aside>
+    <section>
+      <h2>Project</h2>
+      <label for="key">Project Key (PSR file name)</label>
+      <input id="key" readonly>
+      <div class="msg" id="keyMsg"></div>
+      <label for="name">Project Name</label>
+      <input id="name" maxlength="255">
+      <label for="category">Category</label>
+      <select id="category">
+        <option value="">— Select —</option>
+        <option>Water</option><option>Wastewater</option><option>Roadway</option>
+        <option>Drainage</option><option>Building</option>
+      </select>
+    </section>
+
+    <section>
+      <h2>Current location</h2>
+      <div class="existing" id="existing">Loading…</div>
+    </section>
+
+    <section>
+      <h2>Place the project</h2>
+      <div class="row tools">
+        <button id="btnPoint" title="Drop a pin">Pin</button>
+        <button id="btnLine" title="Draw a line (double-click to finish)">Line</button>
+        <button id="btnArea" title="Draw an area (double-click to finish)">Area</button>
+      </div>
+      <div class="row tools" style="margin-top:6px">
+        <button id="btnEdit" title="Reshape the current location">Edit current</button>
+        <button id="btnClear" title="Discard the drawing">Clear</button>
+      </div>
+      <p class="note">One location per project. Use a pin for a facility, a line for a road or pipe, and an area for a site. Double-click to finish a line or area.</p>
+    </section>
+
+    <section>
+      <h2>Find an address</h2>
+      <div class="row">
+        <input id="addr" placeholder="e.g. 8312 Triple Crown">
+        <button id="btnAddr">Search</button>
+      </div>
+      <div id="results"></div>
+    </section>
+
+    <section>
+      <button class="primary" id="btnSave" disabled>Save location</button>
+      <div class="msg" id="msg"></div>
+    </section>
+  </aside>
+  <div id="map"></div>
+</main>
+
+<script src="https://js.arcgis.com/4.34/"></script>
+<script>
+const CONFIG = {
+  portalUrl: "https://fairoaksranch.maps.arcgis.com",
+  appId:     "DhZk7VoirUPP4Sa2",
+  service:   "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services/CoFORPW_CIP_Projects/FeatureServer",
+  jurisdiction: "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services/FOR_Jurisdictional/FeatureServer/0",
+  parcels:   "https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services/Parcels_View/FeatureServer/0/query",
+  keyPrefix: "Project Status Report_",
+  // fields never copied when a project moves to a different geometry layer
+  systemFields: ["OBJECTID", "GlobalID", "Shape__Area", "Shape__Length", "CreationDate", "Creator", "EditDate", "Editor"]
+};
+const LAYER_FOR = { point: 0, polyline: 1, polygon: 2 };
+const LAYER_NAME = ["point", "line", "area"];
+
+// Keep ?project= / ?title= across the OAuth redirect
+(function stashParams() {
+  const p = new URLSearchParams(location.search);
+  if (p.get("project")) sessionStorage.setItem("cipLocator", JSON.stringify({ project: p.get("project"), title: p.get("title") || "" }));
+})();
+function getParams() {
+  const p = new URLSearchParams(location.search);
+  if (p.get("project")) return { project: p.get("project"), title: p.get("title") || "" };
+  try { return JSON.parse(sessionStorage.getItem("cipLocator")) || {}; } catch (e) { return {}; }
+}
+
+require([
+  "esri/identity/OAuthInfo", "esri/identity/IdentityManager", "esri/portal/Portal",
+  "esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/layers/GraphicsLayer",
+  "esri/widgets/Sketch/SketchViewModel", "esri/Graphic", "esri/geometry/support/webMercatorUtils"
+], (OAuthInfo, esriId, Portal, Map, MapView, FeatureLayer, GraphicsLayer, SketchViewModel, Graphic, webMercatorUtils) => {
+
+  const $ = (id) => document.getElementById(id);
+  const sharingUrl = CONFIG.portalUrl + "/sharing";
+  esriId.registerOAuthInfos([new OAuthInfo({ appId: CONFIG.appId, portalUrl: CONFIG.portalUrl, popup: false })]);
+
+  // Only a failed sign-in check triggers the redirect. An error inside start() is shown
+  // on the page instead, so it can't cause a sign-in redirect loop.
+  esriId.checkSignInStatus(sharingUrl).then(
+    () => start().catch((e) => fatal("The app failed to start: " + ((e && e.message) || e))),
+    () => esriId.getCredential(sharingUrl));          // redirects to the AGOL sign-in page
+
+  function fatal(text) { const el = $("msg"); el.className = "msg err"; el.textContent = text; }
+
+  function msg(el, text, kind) { el.className = "msg " + (kind || "info"); el.textContent = text; if (!text) el.className = "msg"; }
+  function sqlStr(s) { return "'" + String(s).replace(/'/g, "''") + "'"; }
+
+  async function start() {
+    const portal = new Portal({ url: CONFIG.portalUrl, authMode: "immediate" });
+    await portal.load();
+    $("user").textContent = portal.user ? "Signed in as " + portal.user.fullName : "";
+
+    const params = getParams();
+    const key = (params.project || "").trim();
+    // Signed in: put the project back in the address bar (so refresh works) and clear the
+    // stash, so a later visit without a link doesn't silently reopen this project.
+    sessionStorage.removeItem("cipLocator");
+    if (key && !new URLSearchParams(location.search).get("project")) {
+      history.replaceState(null, "", location.pathname + "?" + new URLSearchParams({ project: key, title: params.title || "" }));
+    }
+
+    // ---------------- map
+    const sym = {
+      point:   { type: "simple-marker", size: 9, color: [141, 149, 108, 0.6], outline: { color: [25, 39, 55, 0.7], width: 1 } },
+      line:    { type: "simple-line", width: 3, color: [141, 149, 108, 0.7] },
+      polygon: { type: "simple-fill", color: [141, 149, 108, 0.25], outline: { color: [25, 39, 55, 0.7], width: 1 } }
+    };
+    const layers = [0, 1, 2].map((i) => new FeatureLayer({
+      url: CONFIG.service + "/" + i, outFields: ["*"], title: "CIP " + LAYER_NAME[i],
+      renderer: { type: "simple", symbol: [sym.point, sym.line, sym.polygon][i] },
+      popupTemplate: { title: "{ProjectName}", content: "{Category} · {Phase} · {HealthStatus}" }
+    }));
+    const boundary = new FeatureLayer({ url: CONFIG.jurisdiction, renderer: { type: "simple",
+      symbol: { type: "simple-fill", color: [0, 0, 0, 0], outline: { color: [25, 39, 55, 0.8], width: 2, style: "dash" } } },
+      popupEnabled: false, title: "City limits" });
+    const current = new GraphicsLayer({ title: "Current location" });
+    const sketchLayer = new GraphicsLayer({ title: "Drawing" });
+    const parcelLayer = new GraphicsLayer({ title: "Parcel" });
+
+    const map = new Map({ basemap: "hybrid", layers: [boundary, ...layers, parcelLayer, current, sketchLayer] });
+    const view = new MapView({ container: "map", map, center: [-98.64, 29.745], zoom: 13 });
+    view.when(() => boundary.queryExtent().then((r) => r.extent && !key && view.goTo(r.extent.expand(1.05))).catch(() => {}));
+
+    const hl = {
+      point:   { type: "simple-marker", size: 14, color: [255, 214, 0, 0.9], outline: { color: [25, 39, 55], width: 2 } },
+      polyline:{ type: "simple-line", width: 5, color: [255, 214, 0, 0.95] },
+      polygon: { type: "simple-fill", color: [255, 214, 0, 0.3], outline: { color: [255, 214, 0], width: 3 } }
+    };
+    const svm = new SketchViewModel({ view, layer: sketchLayer, defaultUpdateOptions: { tool: "reshape", toggleToolOnClick: false },
+      pointSymbol: hl.point, polylineSymbol: { type: "simple-line", width: 4, color: [0, 170, 255] },
+      polygonSymbol: { type: "simple-fill", color: [0, 170, 255, 0.25], outline: { color: [0, 170, 255], width: 3 } } });
+
+    // ---------------- project
+    let existing = [];   // [{ layerIndex, feature }]
+    $("key").value = key;
+    if (!key) {
+      $("key").readOnly = false;
+      msg($("keyMsg"), "No project was passed in the link. Open this page from the \"Set location\" link in 01_Projects, or paste the exact PSR file name above.", "err");
+      $("key").addEventListener("change", () => { loadProject($("key").value.trim()); });
+    } else {
+      $("name").value = params.title || "";
+      loadProject(key);
+    }
+
+    async function loadProject(k) {
+      await view.when();   // spatialReference must be known before querying
+      existing = []; current.removeAll(); sketchLayer.removeAll();
+      if (!k) { $("existing").textContent = "—"; updateSave(); return; }
+      if (!k.startsWith(CONFIG.keyPrefix) || !/\.xlsx$/i.test(k)) {
+        msg($("keyMsg"), "That doesn't look like a PSR file name (Project Status Report_….xlsx). Saving with a wrong key creates an orphan that never syncs.", "err");
+      } else if (!$("key").readOnly) { msg($("keyMsg"), ""); }
+      $("existing").textContent = "Loading…";
+      const where = "ProjectKey = " + sqlStr(k);
+      let results;
+      try {
+        results = await Promise.all(layers.map((lyr, i) =>
+          lyr.queryFeatures({ where, outFields: ["*"], returnGeometry: true, outSpatialReference: view.spatialReference })
+            .then((fs) => fs.features.map((f) => ({ layerIndex: i, feature: f })))));
+      } catch (e) {
+        // The authoritative service is not public: no access usually means "not in CIP Editors"
+        $("existing").textContent = "Couldn't read the CIP project layers. Ask GIS to add you to the CIP editors group.";
+        updateSave(); return;
+      }
+      existing = results.flat();
+      if (!existing.length) {
+        $("existing").textContent = "Not on the map yet. Place it with Pin, Line or Area.";
+      } else {
+        const a = existing[0].feature.attributes;
+        if (!$("name").value) $("name").value = a.ProjectName || "";
+        if (a.Category) $("category").value = a.Category;
+        const parts = existing.map((e) => LAYER_NAME[e.layerIndex]);
+        $("existing").innerHTML = "On the map as: <b>" + parts.join(", ") + "</b>" +
+          (existing.length > 1 ? "<br><span style='color:#a64850'>This project has " + existing.length +
+            " features. Saving replaces them all with one location.</span>" : "");
+        existing.forEach((e) => current.add(new Graphic({ geometry: e.feature.geometry, symbol: hl[e.feature.geometry.type] })));
+        view.when(() => view.goTo(current.graphics.toArray(), { duration: 600 }).then(() => { if (view.zoom > 18) view.zoom = 17; }));
+      }
+      updateSave();
+    }
+
+    // ---------------- drawing
+    const toolBtns = { point: $("btnPoint"), polyline: $("btnLine"), polygon: $("btnArea") };
+    function setActive(tool) { Object.entries(toolBtns).forEach(([t, b]) => b.classList.toggle("active", t === tool)); }
+    Object.entries(toolBtns).forEach(([tool, btn]) => btn.addEventListener("click", () => {
+      svm.cancel(); sketchLayer.removeAll(); setActive(tool); svm.create(tool);
+    }));
+    svm.on("create", (e) => {
+      if (e.state === "complete") {
+        sketchLayer.graphics.toArray().filter((g) => g !== e.graphic).forEach((g) => sketchLayer.remove(g));
+        setActive(null); updateSave();
+      }
+      if (e.state === "cancel") setActive(null);
+    });
+    svm.on("update", () => updateSave());
+    $("btnEdit").addEventListener("click", () => {
+      if (!existing.length) return;
+      svm.cancel(); sketchLayer.removeAll();
+      const g = new Graphic({ geometry: existing[0].feature.geometry.clone() });
+      sketchLayer.add(g); svm.update([g]); updateSave();
+    });
+    $("btnClear").addEventListener("click", () => { svm.cancel(); sketchLayer.removeAll(); setActive(null); updateSave(); });
+
+    function draft() { const g = sketchLayer.graphics.getItemAt(0); return g ? g.geometry : null; }
+    function updateSave() {
+      $("btnEdit").disabled = !existing.length;
+      $("btnSave").disabled = !(draft() && $("key").value.trim());
+    }
+    ["name", "category"].forEach((id) => $(id).addEventListener("input", updateSave));
+
+    // ---------------- address search (direct REST, per CoFOR standard)
+    $("btnAddr").addEventListener("click", searchAddr);
+    $("addr").addEventListener("keydown", (e) => { if (e.key === "Enter") searchAddr(); });
+    async function searchAddr() {
+      const q = $("addr").value.trim().toUpperCase();
+      $("results").innerHTML = "";
+      if (q.length < 3) return;
+      const body = new URLSearchParams({ where: "UPPER(ADDRESS) LIKE " + sqlStr("%" + q + "%"), outFields: "ADDRESS",
+        returnGeometry: "true", outSR: "102100", resultRecordCount: "10", f: "json" });
+      try {
+        const r = await fetch(CONFIG.parcels, { method: "POST", body }).then((x) => x.json());
+        const feats = r.features || [];
+        if (!feats.length) { $("results").innerHTML = "<div>No matches</div>"; return; }
+        feats.forEach((f) => {
+          const d = document.createElement("div"); d.textContent = f.attributes.ADDRESS;
+          d.onclick = () => {
+            parcelLayer.removeAll();
+            const g = new Graphic({ geometry: { type: "polygon", rings: f.geometry.rings, spatialReference: { wkid: 102100 } },
+              symbol: { type: "simple-fill", color: [0, 0, 0, 0], outline: { color: [255, 255, 255], width: 2.5 } } });
+            parcelLayer.add(g); view.goTo({ target: g, zoom: 18 });
+          };
+          $("results").appendChild(d);
+        });
+      } catch (e) { $("results").innerHTML = "<div>Search failed</div>"; }
+    }
+
+    // ---------------- save
+    $("btnSave").addEventListener("click", save);
+    async function save() {
+      const k = $("key").value.trim(), name = $("name").value.trim(), cat = $("category").value;
+      // Drawing is in Web Mercator (basemap); the service is WKID 4326, so convert explicitly
+      // rather than relying on the server to project on applyEdits.
+      let geom = draft();
+      if (geom && geom.spatialReference && geom.spatialReference.isWebMercator) geom = webMercatorUtils.webMercatorToGeographic(geom);
+      if (!k) return msg($("msg"), "Project key is missing.", "err");
+      if (!name) return msg($("msg"), "Project Name is required.", "err");
+      if (!cat) return msg($("msg"), "Choose a Category.", "err");
+      if (!geom) return msg($("msg"), "Draw a pin, line or area first.", "err");
+      const target = LAYER_FOR[geom.type];
+      if (existing.length > 1 && !confirm("This replaces " + existing.length + " existing features with one " + LAYER_NAME[target] + ". Continue?")) return;
+
+      $("btnSave").disabled = true; msg($("msg"), "Saving…", "info");
+      try {
+        const sameLayerSingle = existing.length === 1 && existing[0].layerIndex === target;
+        if (sameLayerSingle) {
+          // Same geometry type: update in place (keeps GlobalID, edit history and synced attributes)
+          const f = existing[0].feature, oidField = layers[target].objectIdField;
+          const res = await layers[target].applyEdits({ updateFeatures: [new Graphic({ geometry: geom,
+            attributes: { [oidField]: f.attributes[oidField], ProjectName: name, Category: cat } })] });
+          const r = res.updateFeatureResults[0];
+          if (r.error) throw r.error;
+        } else {
+          // New project, or switching geometry type: add first, delete old only if the add succeeded
+          const attrs = {};
+          if (existing.length) {
+            Object.entries(existing[0].feature.attributes).forEach(([k2, v]) => { if (!CONFIG.systemFields.includes(k2)) attrs[k2] = v; });
+          }
+          Object.assign(attrs, { ProjectKey: k, ProjectName: name, Category: cat });
+          if (!attrs.Lifecycle) attrs.Lifecycle = "Active";
+          const add = await layers[target].applyEdits({ addFeatures: [new Graphic({ geometry: geom, attributes: attrs })] });
+          const ar = add.addFeatureResults[0];
+          if (ar.error) throw ar.error;
+          for (const i of [0, 1, 2]) {
+            const ids = existing.filter((e) => e.layerIndex === i).map((e) => e.feature.attributes[layers[i].objectIdField]);
+            if (!ids.length) continue;
+            const del = await layers[i].applyEdits({ deleteFeatures: ids.map((id) => ({ objectId: id })) });
+            const bad = del.deleteFeatureResults.filter((d) => d.error);
+            if (bad.length) throw new Error("New location saved, but " + bad.length + " old feature(s) could not be removed. Tell GIS.");
+          }
+        }
+        msg($("msg"), "Saved. GIS will review the location; project details fill in on the next sync.", "ok");
+        layers.forEach((l) => l.refresh());
+        await loadProject(k);
+      } catch (e) {
+        const text = (e && (e.message || e.description)) || String(e);
+        msg($("msg"), /permission|not authorized|403|User does not have/i.test(text)
+          ? "Your account can't edit CIP project locations. Ask GIS to add you to the CIP editors group."
+          : "Save failed: " + text, "err");
+      } finally { updateSave(); }
+    }
+  }
+});
+</script>
+</body>
+</html>
