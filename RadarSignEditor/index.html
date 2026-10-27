@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar Sign Editor | City of Fair Oaks Ranch</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
+<!--
+  CoFOR Radar Sign Editor  (cofor-gis/gis-apps/RadarSignEditor)
+  Edits the AUTHORITATIVE "Radar Feedback Sign Locations and History" layer
+  (item ab7d2e71444a4a3fb667df7c99be435a, layer 0 Deployment History).
+  The public view (Status = 'Fixed') and gis.local/Traffic read from it.
+
+  Conventions (Traffic Radar handoff guide, Sections 11.2, 23, 24):
+   - Direction = compass bearing the sign FACES (toward oncoming traffic).
+     The map arrow shows the traffic it measures (Direction + 180).
+   - SiteID = dashboard site ID (ROAD-DIR-#). Direction letters follow road
+     naming, not compass bins.
+   - Status: Fixed / Floating / Retired. Only Fixed is public.
+   - Moving the floating sign = "Record a move": the current record gets an
+     EndDate and a new record starts. History is never overwritten.
+   - No deletes. Deleting an inventory row would cascade-delete its history (F19).
+  Sign-in: redirect OAuth, app ID DhZk7VoirUPP4Sa2. Editing rights come from
+  AGOL sharing of the authoritative layer.
+-->
+<style>
+:root{--ink:#1F1E1A;--ink2:#2a2924;--ink3:#34322c;--line:#47443b;--accent:#D49A4E;--accent2:#e8b779;--text:#f2eee6;--dim:#b5ad9e;--ok:#7fb069;--warn:#e0a83a;--bad:#e05d4f;--float:#4fc3d4;--ret:#8b8578;--r:8px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--ink);color:var(--text);font-family:Manrope,system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+h1,h2,h3{font-family:'Bricolage Grotesque',Manrope,sans-serif;font-weight:700}
+button,input,select,textarea{font-family:inherit;font-size:13px}
+.hdr{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--ink2);border-bottom:2px solid var(--accent);flex-shrink:0}
+.hdr img{height:38px;width:auto}
+.hdr h1{font-size:18px;line-height:1.1}
+.hdr .sub{font-size:11px;color:var(--dim)}
+.hdr .sp{flex:1}
+.hdr .who{font-size:12px;color:var(--dim);text-align:right}
+.hdr a,.lnk{color:var(--accent2);text-decoration:none}
+.btn{background:var(--ink3);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:#1F1E1A;border-color:var(--accent)}
+.btn.pri:hover{background:var(--accent2)}
+.btn.on{background:var(--float);color:#111;border-color:var(--float)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.app{flex:1;display:flex;min-height:0}
+.side{width:300px;flex-shrink:0;background:var(--ink2);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side .top{padding:12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
+.side .top input{flex:1;min-width:0;background:var(--ink);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:7px 9px}
+.list{overflow:auto;flex:1;padding:6px 8px 16px}
+.grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin:12px 4px 4px}
+.row{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:6px;padding:6px 8px;color:var(--text);cursor:pointer}
+.row:hover{background:var(--ink3)}
+.row.sel{background:var(--ink3);border-color:var(--accent)}
+.row .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.row .t{flex:1;min-width:0}
+.row .sid{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--accent2)}
+.row .nm{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .flag{font-size:10px;color:var(--warn);white-space:nowrap}
+.mapwrap{flex:1;position:relative;min-width:0}
+#map{position:absolute;inset:0}
+.banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--float);color:#111;font-weight:700;padding:8px 14px;border-radius:20px;z-index:10;display:none;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.legend{position:absolute;left:12px;bottom:26px;background:rgba(31,30,26,.92);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font-size:11px;color:var(--dim);line-height:1.7;z-index:5}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.panel{width:360px;flex-shrink:0;background:var(--ink2);border-left:1px solid var(--line);overflow:auto;display:none}
+.panel.open{display:block}
+.panel .ph{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:8px}
+.panel .ph h2{font-size:17px}
+.panel .ph .meta{font-size:11px;color:var(--dim);margin-top:2px}
+.panel .ph .x{margin-left:auto;background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;line-height:1}
+.sec{padding:12px 16px;border-bottom:1px solid var(--line)}
+.sec h3{font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;font-family:Manrope,sans-serif}
+.f{margin-bottom:9px}
+.f label{display:block;font-size:11px;color:var(--dim);margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:7px 9px}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--accent)}
+.f .err{color:var(--bad);font-size:11px;margin-top:2px;display:none}
+.f.bad input{border-color:var(--bad)}.f.bad .err{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dial{display:flex;gap:12px;align-items:center}
+.dial svg{width:150px;height:150px;flex-shrink:0;touch-action:none;cursor:grab}
+.dial .txt{font-size:12px;line-height:1.55;color:var(--dim)}
+.dial .txt b{color:var(--text)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:11px;color:var(--dim);line-height:1.5;margin-top:6px}
+.msg{position:fixed;right:16px;bottom:16px;max-width:380px;padding:10px 14px;border-radius:var(--r);font-weight:600;z-index:50;display:none;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+.msg.ok{background:var(--ok);color:#111;display:block}.msg.err{background:var(--bad);color:#fff;display:block}
+.inv{font-size:12px;line-height:1.6}
+.inv span{color:var(--dim)}
+.gate{position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:100;text-align:center;padding:20px}
+.gate .box{max-width:420px}
+.gate h2{margin:12px 0 6px}.gate p{color:var(--dim);line-height:1.6;margin-bottom:14px}
+.moveBox{background:rgba(79,195,212,.08);border:1px solid rgba(79,195,212,.4);border-radius:var(--r);padding:10px;margin-top:8px}
+@media (max-width:900px){
+  .app{flex-direction:column;overflow:auto}
+  .side{width:100%;max-height:30vh;border-right:none;border-bottom:1px solid var(--line)}
+  .mapwrap{min-height:50vh;flex:none;height:50vh}
+  .panel{width:100%;border-left:none}
+  .hdr .sub{display:none}
+}
+</style>
+</head>
+<body>
+<div class="gate" id="gate"><div class="box">
+  <img src="logo.svg" alt="City of Fair Oaks Ranch" style="height:64px">
+  <h2>Radar Sign Editor</h2>
+  <p id="gateMsg">Signing in to ArcGIS Online&#x2026;</p>
+  <button class="btn pri" id="gateBtn" style="display:none">Sign in</button>
+</div></div>
+
+<div class="hdr">
+  <img src="logo.svg" alt="City of Fair Oaks Ranch">
+  <div><h1>Radar Sign Editor</h1><div class="sub">City of Fair Oaks Ranch &#xb7; Public Works &#xb7; sign locations and placements</div></div>
+  <div class="sp"></div>
+  <a class="lnk" href="http://gis.local/Traffic/" target="_blank" rel="noopener" title="Opens only on the City network">Dashboard &#x2197;</a>
+  <div class="who"><div id="who">&#x2014;</div><a href="#" id="signOut">Sign out</a></div>
+</div>
+
+<div class="app">
+  <div class="side">
+    <div class="top"><input id="q" type="search" placeholder="Search site, road, or unit" autocomplete="off"><button class="btn" id="addBtn" title="Place a new sign record on the map">+ Add</button></div>
+    <div class="list" id="list"></div>
+  </div>
+  <div class="mapwrap">
+    <div id="map"></div>
+    <div class="banner" id="banner"></div>
+    <div class="legend"><div><i style="background:#D49A4E"></i>Fixed</div><div><i style="background:#4fc3d4"></i>Floating</div><div><i style="background:#8b8578"></i>Retired</div><div style="margin-top:4px">&#x25b2; arrow = traffic the sign measures</div></div>
+  </div>
+  <div class="panel" id="panel">
+    <div class="ph"><div><h2 id="pTitle">&#x2014;</h2><div class="meta" id="pMeta"></div></div><button class="x" id="pClose" title="Close">&#xd7;</button></div>
+    <div class="sec">
+      <h3>Where and which way</h3>
+      <div class="dial">
+        <svg id="dial" viewBox="-80 -80 160 160" aria-label="Direction the sign faces; drag to set">
+          <circle r="70" fill="#1F1E1A" stroke="#47443b"/>
+          <g id="ticks"></g>
+          <text y="-56" text-anchor="middle" fill="#f2eee6" font-size="12" font-weight="700">N</text>
+          <text x="58" y="4" text-anchor="middle" fill="#b5ad9e" font-size="11">E</text>
+          <text y="64" text-anchor="middle" fill="#b5ad9e" font-size="11">S</text>
+          <text x="-58" y="4" text-anchor="middle" fill="#b5ad9e" font-size="11">W</text>
+          <g id="trafArrow"><line y1="18" y2="-34" stroke="#4fc3d4" stroke-width="3"/><path d="M0 -46 L8 -30 L-8 -30 Z" fill="#4fc3d4"/></g>
+          <g id="faceArrow"><line y1="0" y2="-44" stroke="#D49A4E" stroke-width="4"/><circle cy="-50" r="8" fill="#D49A4E" stroke="#1F1E1A" stroke-width="2"/></g>
+          <circle r="4" fill="#f2eee6"/>
+        </svg>
+        <div class="txt">
+          <div class="f" style="margin-bottom:6px"><label for="fDir">Sign faces (&#xb0;)</label><input id="fDir" type="number" min="0" max="359.99" step="1"><div class="err">0 to 359.99</div></div>
+          <div><b style="color:#D49A4E">&#x25cf;</b> faces <b id="faceTxt">&#x2014;</b></div>
+          <div><b style="color:#4fc3d4">&#x25b2;</b> measures traffic heading <b id="travTxt">&#x2014;</b></div>
+        </div>
+      </div>
+      <div class="acts" style="margin-top:10px">
+        <button class="btn" id="aimBtn" title="Click the map at a point the sign faces toward">Aim on map</button>
+        <button class="btn" id="moveBtn" title="Click the map to set a new location for this record">Move location</button>
+      </div>
+      <div class="hint">Direction is the bearing the sign <b>faces</b>, toward oncoming traffic. A sign facing west (270&#xb0;) measures eastbound traffic.</div>
+    </div>
+    <div class="sec">
+      <h3>Record</h3>
+      <div class="two">
+        <div class="f"><label for="fSite">Site ID</label><input id="fSite" list="siteList" placeholder="DE-EB-1" autocomplete="off"><div class="err">Format ROAD-DIR-#, e.g. OFR-SB-1</div></div>
+        <div class="f"><label for="fUnit">Unit</label><input id="fUnit" placeholder="RS08"><div class="err">Unit number, e.g. RS08</div></div>
+      </div>
+      <datalist id="siteList"></datalist>
+      <div class="f"><label for="fName">Location name</label><input id="fName" maxlength="150" placeholder="Old Fredericksburg Rd SB"></div>
+      <div class="two">
+        <div class="f"><label for="fStatus">Status</label><select id="fStatus"><option>Fixed</option><option>Floating</option><option>Retired</option></select></div>
+        <div class="f"><label for="fLimit">Speed limit (mph)</label><input id="fLimit" type="number" min="5" max="85" step="5"><div class="err">5 to 85</div></div>
+      </div>
+      <div class="two">
+        <div class="f"><label for="fStart">Start</label><input id="fStart" type="date"></div>
+        <div class="f"><label for="fEnd">End</label><input id="fEnd" type="date"><div class="err">End is before start</div></div>
+      </div>
+      <div class="two">
+        <div class="f"><label for="fFactory">Factory serial</label><input id="fFactory" maxlength="50"></div>
+        <div class="f"><label for="fDep">Deployment ID (legacy)</label><input id="fDep" maxlength="100"></div>
+      </div>
+      <div class="f"><label for="fNotes">Notes (internal)</label><textarea id="fNotes" rows="2" maxlength="255"></textarea></div>
+      <div class="acts"><button class="btn pri" id="saveBtn">Save</button><button class="btn" id="cancelBtn">Discard changes</button></div>
+      <div class="hint" id="editInfo"></div>
+    </div>
+    <div class="sec" id="moveSec">
+      <h3>Floating sign</h3>
+      <button class="btn" id="relocBtn">Record a move&#x2026;</button>
+      <div class="moveBox" id="moveBox" style="display:none">
+        <div class="hint" style="margin-top:0;margin-bottom:8px">Ends this placement and starts a new record at the new spot. The old record stays as history.</div>
+        <div class="two">
+          <div class="f"><label for="mSite">New site ID</label><input id="mSite" list="siteList" placeholder="OFR-SB-1"><div class="err">Format ROAD-DIR-#</div></div>
+          <div class="f"><label for="mDir">Faces (&#xb0;)</label><input id="mDir" type="number" min="0" max="359.99"><div class="err">0 to 359.99</div></div>
+        </div>
+        <div class="f"><label for="mName">New location name</label><input id="mName" maxlength="150"></div>
+        <div class="f"><label for="mWhen">Moved at</label><input id="mWhen" type="datetime-local"></div>
+        <div class="acts"><button class="btn" id="mPick">Pick new spot on map</button><button class="btn pri" id="mSave" disabled>Save move</button><button class="btn" id="mCancel">Cancel</button></div>
+        <div class="hint" id="mSpot">No spot picked yet.</div>
+      </div>
+    </div>
+    <div class="sec"><h3>Sign inventory</h3><div class="inv" id="inv">&#x2014;</div>
+      <div class="hint">Read-only here. Inventory rows are never deleted from this app (deleting one would delete the sign's whole history, F19).</div></div>
+    <div class="sec"><a class="lnk" id="dashLink" href="#" target="_blank" rel="noopener">Open this site in the dashboard &#x2197;</a></div>
+  </div>
+</div>
+<div class="msg" id="msg"></div>
+
+<script src="https://js.arcgis.com/4.31/"></script>
+<script>
+const PORTAL='https://fairoaksranch.maps.arcgis.com';
+const APP_ID='DhZk7VoirUPP4Sa2';
+const SVC='https://services6.arcgis.com/Cnwpb7mZuifVHE6A/arcgis/rest/services/Radar_Feedback_Sign_Locations_and_History/FeatureServer';
+const LAYER_URL=SVC+'/0', INV_URL=SVC+'/1';
+const DASH='http://gis.local/Traffic/#site=';
+const SITE_RE=/^[A-Z0-9]{1,8}(-[A-Z0-9]{1,6}){1,3}$/;
+const KNOWN_SITES=['DE-EB-1','DE-EB-2','DE-WB-1','DE-WB-2','PL-EB-1','PL-WB-1','MC-NB-1','MC-SB-1','FOP-SB-1','FOP-SB-2','FOP-NB-1','FOP-NB-2','BI-SB-1','BI-NB-1','OFR-NB-1','OFR-SB-1'];
+const COLORS={Fixed:'#D49A4E',Floating:'#4fc3d4',Retired:'#8b8578'};
+const $=id=>document.getElementById(id);
+const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const unitNum=v=>{const m=String(v||'').match(/\d+/);return m?parseInt(m[0],10):null};
+const unitLabel=v=>{const n=unitNum(v);return n==null?'\u2014':'RS'+String(n).padStart(2,'0')};
+const norm=b=>{b=Number(b);return((b%360)+360)%360};
+const compass=b=>['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(norm(b)/22.5)%16];
+const dateIn=ms=>ms?new Date(ms).toISOString().slice(0,10):'';
+const dateOut=s=>s?Date.UTC(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10),12):null;
+function toast(t,ok=true){const m=$('msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');clearTimeout(m._t);m._t=setTimeout(()=>m.className='msg',ok?3500:9000)}
+
+require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/Portal','esri/Map','esri/views/MapView',
+  'esri/layers/FeatureLayer','esri/layers/GraphicsLayer','esri/Graphic','esri/geometry/Point','esri/geometry/projection',
+  'esri/widgets/BasemapToggle','esri/widgets/Search','esri/core/reactiveUtils'],
+(OAuthInfo,IdM,Portal,EsriMap,MapView,FeatureLayer,GraphicsLayer,Graphic,Point,projection,BasemapToggle,Search,reactiveUtils)=>{
+  const info=new OAuthInfo({appId:APP_ID,portalUrl:PORTAL,popup:false,flowType:'auto'});
+  IdM.registerOAuthInfos([info]);
+  const signIn=()=>IdM.getCredential(info.portalUrl+'/sharing');
+  $('gateBtn').onclick=signIn;
+  $('signOut').onclick=e=>{e.preventDefault();IdM.destroyCredentials();location.reload()};
+  IdM.checkSignInStatus(info.portalUrl+'/sharing').catch(()=>signIn()).then(start).catch(err=>{
+    $('gateMsg').textContent='Sign-in is needed to edit sign records. '+(err&&err.message?'('+err.message+')':'');$('gateBtn').style.display=''});
+
+  let layer,view,lv,hl=null,recs=[],inv={},sel=null,orig=null,pending=null,mode=null,moveSpot=null,oidF='OBJECTID',editable=true;
+  const tmp=new GraphicsLayer({listMode:'hide'});
+
+  function arrowSym(c,big){return{type:'simple-marker',path:'M 0 -12 L 9 10 L 0 5 L -9 10 Z',color:c,size:big?26:20,outline:{color:[20,19,16,1],width:1}}}
+  function dotSym(c){return{type:'simple-marker',style:'circle',color:c,size:12,outline:{color:[20,19,16,1],width:1}}}
+
+  async function start(){
+    const portal=new Portal({url:PORTAL});await portal.load();
+    $('who').textContent=portal.user?portal.user.fullName||portal.user.username:'Signed in';
+    layer=new FeatureLayer({url:LAYER_URL,outFields:['*'],popupEnabled:false,
+      renderer:{type:'unique-value',valueExpression:"IIF(IsEmpty($feature.Direction),'d','a')+When($feature.Status=='Floating','F',$feature.Status=='Retired','R','X')",
+        uniqueValueInfos:[['aX',arrowSym(COLORS.Fixed)],['aF',arrowSym(COLORS.Floating)],['aR',arrowSym(COLORS.Retired)],['dX',dotSym(COLORS.Fixed)],['dF',dotSym(COLORS.Floating)],['dR',dotSym(COLORS.Retired)]].map(([value,symbol])=>({value,symbol})),
+        visualVariables:[{type:'rotation',valueExpression:'IIF(IsEmpty($feature.Direction),0,$feature.Direction+180)',rotationType:'geographic'}]},
+      labelingInfo:[{labelExpressionInfo:{expression:"IIF(IsEmpty($feature.SiteID),'RS'+$feature.UnitID,$feature.SiteID)"},
+        symbol:{type:'text',color:'#f2eee6',haloColor:'#1F1E1A',haloSize:1.5,font:{size:10,family:'monospace'}},labelPlacement:'above-center'}]});
+    try{await layer.load()}catch(e){gateFail('Cannot open the sign layer with this account: '+(e.message||e));return}
+    oidF=layer.objectIdField;
+    editable=!!(layer.capabilities&&layer.capabilities.operations&&layer.capabilities.operations.supportsUpdate);
+    if(!layer.fields.some(f=>f.name==='SiteID')){toast('This layer has no SiteID field yet. Run radar_agol_prep.py --apply first.',false)}
+    view=new MapView({container:'map',map:new EsriMap({basemap:'dark-gray-vector',layers:[layer,tmp]}),center:[-98.645,29.74],zoom:13,
+      popupEnabled:false,constraints:{snapToZoom:false}});
+    view.ui.add(new BasemapToggle({view,nextBasemap:'hybrid'}),'bottom-right');
+    view.ui.add(new Search({view,includeDefaultSources:true,popupEnabled:false,resultGraphicEnabled:false}),'top-right');
+    lv=await view.whenLayerView(layer);
+    view.on('click',onMapClick);
+    await projection.load();
+    $('gate').style.display='none';
+    await loadAll(true);
+    if(!editable)toast('Your account can view but not edit this layer.',false);
+  }
+  function gateFail(t){$('gate').style.display='';$('gateMsg').textContent=t;$('gateBtn').style.display='none'}
+
+  async function loadAll(zoom){
+    const fs=await layer.queryFeatures({where:'1=1',outFields:['*'],returnGeometry:true,returnZ:!!layer.hasZ,outSpatialReference:{wkid:4326}});
+    recs=fs.features;
+    try{const it=new FeatureLayer({url:INV_URL});const r=await it.queryFeatures({where:'1=1',outFields:['*']});inv={};r.features.forEach(f=>{const n=unitNum(f.attributes.UnitID);if(n!=null)inv[n]=f.attributes})}catch(e){inv={}}
+    const ids=new Set(KNOWN_SITES);recs.forEach(f=>{if(f.attributes.SiteID)ids.add(f.attributes.SiteID)});
+    $('siteList').innerHTML=[...ids].sort().map(s=>'<option value="'+esc(s)+'">').join('');
+    renderList();
+    if(zoom&&recs.length){const g=recs.map(f=>f.geometry).filter(Boolean);if(g.length){view.goTo(g,{animate:false}).then(()=>{if(view.zoom>16)view.zoom=16}).catch(()=>{})}}
+    if(sel!=null){const f=recs.find(r=>r.attributes[oidF]===sel);if(f)openRec(f,true);else closePanel()}
+  }
+
+  function flags(a){const o=[];if(!a.SiteID)o.push('no site ID');if(a.Direction==null)o.push('no direction');if(!a.LocationName)o.push('no name');return o}
+  function renderList(){
+    const q=$('q').value.trim().toLowerCase();
+    const groups={Fixed:[],Floating:[],Retired:[],Other:[]};
+    recs.forEach(f=>{const a=f.attributes;const hay=[a.SiteID,a.LocationName,a.DeploymentID,unitLabel(a.UnitID),a.Status].join(' ').toLowerCase();if(q&&hay.indexOf(q)<0)return;(groups[a.Status]||groups.Other).push(f)});
+    let h='';
+    for(const[g,arr]of Object.entries(groups)){if(!arr.length)continue;
+      arr.sort((x,y)=>(g==='Floating'?(y.attributes.StartDate||0)-(x.attributes.StartDate||0):String(x.attributes.SiteID||'~'+unitLabel(x.attributes.UnitID)).localeCompare(String(y.attributes.SiteID||'~'+unitLabel(y.attributes.UnitID)))));
+      h+='<div class="grp">'+(g==='Other'?'No status':g)+' \u00b7 '+arr.length+'</div>';
+      arr.forEach(f=>{const a=f.attributes,fl=flags(a);
+        const sub=g==='Floating'?(dateIn(a.StartDate)||'?')+' \u2192 '+(a.EndDate?dateIn(a.EndDate):'now'):(a.LocationName||a.DeploymentID||'');
+        h+='<button class="row'+(a[oidF]===sel?' sel':'')+'" data-oid="'+a[oidF]+'"><span class="dot" style="background:'+(COLORS[a.Status]||'#666')+'"></span><span class="t"><div class="sid">'+esc(a.SiteID||'\u2014')+' \u00b7 '+unitLabel(a.UnitID)+'</div><div class="nm">'+esc(sub)+'</div></span>'+(fl.length?'<span class="flag" title="'+esc(fl.join(', '))+'">\u26a0 '+fl.length+'</span>':'')+'</button>'})}
+    $('list').innerHTML=h||'<div class="hint" style="padding:10px">No records match.</div>';
+    $('list').querySelectorAll('.row').forEach(b=>b.onclick=()=>{const f=recs.find(r=>r.attributes[oidF]===+b.dataset.oid);if(f){openRec(f);view.goTo({target:f.geometry,zoom:Math.max(view.zoom,16)}).catch(()=>{})}});
+  }
+  $('q').addEventListener('input',renderList);
+
+  // \u2500\u2500 selection / form \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  function setHL(oid){if(hl){hl.remove();hl=null}if(oid!=null&&lv)hl=lv.highlight(oid)}
+  function openRec(f,keepPending){
+    if(!keepPending&&dirty()&&!confirm('Discard unsaved changes?'))return;
+    sel=f.attributes[oidF];orig=f;mode=null;setBanner();
+    pending={geometry:f.geometry?f.geometry.clone():null};
+    const a=f.attributes;
+    $('pTitle').textContent=(a.SiteID||'No site ID')+' \u00b7 '+unitLabel(a.UnitID);
+    const iv=inv[unitNum(a.UnitID)];
+    $('pMeta').textContent=(iv?(iv.Brand||'')+' '+(iv.Model||''):'')+(a.Status?' \u00b7 '+a.Status:'');
+    $('fSite').value=a.SiteID||'';$('fUnit').value=a.UnitID!=null?unitLabel(a.UnitID):'';$('fName').value=a.LocationName||'';
+    $('fStatus').value=a.Status||'Fixed';$('fLimit').value=a.SpeedLimitMPH!=null?a.SpeedLimitMPH:'';
+    $('fStart').value=dateIn(a.StartDate);$('fEnd').value=dateIn(a.EndDate);$('fFactory').value=a.FactoryID||'';$('fDep').value=a.DeploymentID||'';$('fNotes').value=a.Notes||'';
+    setDir(a.Direction,false);
+    $('editInfo').textContent=a.EditDate?'Last edited '+new Date(a.EditDate).toLocaleString()+(a.Editor?' by '+a.Editor:''):'';
+    $('inv').innerHTML=iv?['UnitName','Brand','Model','Status','DateActive'].map(k=>'<div><span>'+k+':</span> '+esc(k==='DateActive'?dateIn(iv[k]):iv[k]||'\u2014')+'</div>').join(''):'No inventory row for '+unitLabel(a.UnitID)+'.';
+    $('dashLink').href=a.SiteID?DASH+encodeURIComponent(a.SiteID):'http://gis.local/Traffic/';
+    $('moveSec').style.display=a.Status==='Floating'&&!a.EndDate?'':'none';$('moveBox').style.display='none';
+    document.querySelectorAll('.f.bad').forEach(x=>x.classList.remove('bad'));
+    $('panel').classList.add('open');renderList();setHL(sel);drawPreview();
+  }
+  function closePanel(){sel=null;orig=null;pending=null;mode=null;setBanner();$('panel').classList.remove('open');setHL(null);tmp.removeAll();renderList()}
+  $('pClose').onclick=()=>{if(dirty()&&!confirm('Discard unsaved changes?'))return;closePanel()};
+  $('cancelBtn').onclick=()=>{if(orig&&orig.attributes[oidF]!=null)openRec(orig,true);else closePanel()};
+
+  function formAttrs(){
+    return{SiteID:$('fSite').value.trim().toUpperCase()||null,UnitID:(()=>{const n=unitNum($('fUnit').value);return n==null?null:String(n).padStart(2,'0')})(),
+      LocationName:$('fName').value.trim()||null,Status:$('fStatus').value,SpeedLimitMPH:$('fLimit').value===''?null:+$('fLimit').value,
+      StartDate:dateOut($('fStart').value),EndDate:dateOut($('fEnd').value),FactoryID:$('fFactory').value.trim()||null,
+      DeploymentID:$('fDep').value.trim()||null,Notes:$('fNotes').value.trim()||null,Direction:$('fDir').value===''?null:Math.round(norm(+$('fDir').value)*100)/100}
+  }
+  function changed(){
+    if(!orig)return{};const a=orig.attributes,n=formAttrs(),c={};
+    for(const k in n){if(!layer.fields.some(f=>f.name===k))continue;const o=a[k]==null||a[k]===''?null:(k==='UnitID'?String(unitNum(a[k])).padStart(2,'0'):a[k]);
+      if(k==='StartDate'||k==='EndDate'){if(dateIn(o)!==dateIn(n[k]))c[k]=n[k]}else if(o!==n[k]&&!(typeof o==='number'&&Math.abs(o-n[k])<0.005))c[k]=n[k]}
+    return c}
+  function geomChanged(){return pending&&pending.geometry&&orig&&orig.geometry&&(Math.abs(pending.geometry.x-orig.geometry.x)>1e-9||Math.abs(pending.geometry.y-orig.geometry.y)>1e-9)}
+  function dirty(){return !!orig&&(orig.attributes[oidF]==null||Object.keys(changed()).length>0||geomChanged())}
+  function validate(){
+    let ok=true;const bad=(id,b)=>{$(id).closest('.f').classList.toggle('bad',b);if(b)ok=false};
+    const n=formAttrs();
+    bad('fSite',!!n.SiteID&&!SITE_RE.test(n.SiteID));bad('fUnit',n.UnitID==null);
+    bad('fDir',$('fDir').value!==''&&(+$('fDir').value<0||+$('fDir').value>=360));
+    bad('fLimit',n.SpeedLimitMPH!=null&&(n.SpeedLimitMPH<5||n.SpeedLimitMPH>85));
+    bad('fEnd',!!(n.StartDate&&n.EndDate&&n.EndDate<n.StartDate));
+    if(!pending||!pending.geometry){toast('Pick a location on the map first.',false);ok=false}
+    return ok}
+
+  async function toLayerGeom(g){
+    let p=projection.project(g,layer.spatialReference);
+    if(layer.hasZ){p=p.clone();p.hasZ=true;if(p.z==null)p.z=(orig&&orig.geometry&&orig.geometry.z)||0}
+    return p}
+
+  $('saveBtn').onclick=async()=>{
+    if(!orig||!validate())return;
+    const isNew=orig.attributes[oidF]==null;
+    const ch=isNew?formAttrs():changed();
+    Object.keys(ch).forEach(k=>{if(!layer.fields.some(f=>f.name===k))delete ch[k]});
+    if(!isNew&&!Object.keys(ch).length&&!geomChanged()){toast('No changes to save.');return}
+    const attrs={...ch};if(!isNew)attrs[oidF]=orig.attributes[oidF];
+    const g=new Graphic({attributes:attrs});
+    if(isNew||geomChanged())g.geometry=await toLayerGeom(pending.geometry);
+    $('saveBtn').disabled=true;
+    try{
+      const r=await layer.applyEdits(isNew?{addFeatures:[g]}:{updateFeatures:[g]});
+      const res=(isNew?r.addFeatureResults:r.updateFeatureResults)[0];
+      if(res.error)throw new Error(res.error.message||'edit refused');
+      if(isNew)sel=res.objectId;
+      toast(isNew?'Sign record added.':'Saved.');mode=null;setBanner();await loadAll(false);
+    }catch(e){toast('Save failed: '+(e.details&&e.details.messages?e.details.messages.join('; '):e.message||e),false)}
+    finally{$('saveBtn').disabled=false}
+  };
+
+  // \u2500\u2500 direction dial \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  (function(){let t='';for(let i=0;i<360;i+=15){const r1=i%90?64:58,a=i*Math.PI/180;t+='<line x1="'+(Math.sin(a)*r1).toFixed(1)+'" y1="'+(-Math.cos(a)*r1).toFixed(1)+'" x2="'+(Math.sin(a)*70).toFixed(1)+'" y2="'+(-Math.cos(a)*70).toFixed(1)+'" stroke="#47443b"/>'}$('ticks').innerHTML=t})();
+  function setDir(b,fromUser){
+    const has=b!=null&&b!==''&&!isNaN(b);const v=has?Math.round(norm(b)):null;
+    if(fromUser!=='input')$('fDir').value=has?v:'';
+    $('faceArrow').setAttribute('transform','rotate('+(has?v:0)+')');$('trafArrow').setAttribute('transform','rotate('+(has?v+180:180)+')');
+    $('faceArrow').style.opacity=$('trafArrow').style.opacity=has?1:.25;
+    $('faceTxt').textContent=has?v+'\u00b0 ('+compass(v)+')':'not set';$('travTxt').textContent=has?norm(v+180)+'\u00b0 ('+compass(v+180)+')':'\u2014';
+    if(fromUser)drawPreview()}
+  $('fDir').addEventListener('input',()=>setDir($('fDir').value===''?null:+$('fDir').value,'input'));
+  (function(){const s=$('dial');let drag=false;
+    const at=e=>{const r=s.getBoundingClientRect();const x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;let b=Math.atan2(x,-y)*180/Math.PI;b=Math.round(norm(b)/5)*5%360;setDir(b,true)};
+    s.addEventListener('pointerdown',e=>{if(!orig)return;drag=true;s.setPointerCapture(e.pointerId);at(e)});
+    s.addEventListener('pointermove',e=>{if(drag)at(e)});s.addEventListener('pointerup',()=>drag=false)})();
+
+  function drawPreview(){
+    tmp.removeAll();if(!pending||!pending.geometry)return;
+    const d=$('fDir').value===''?null:+$('fDir').value;const c=COLORS[$('fStatus').value]||'#fff';
+    tmp.add(new Graphic({geometry:pending.geometry,symbol:d==null?{...dotSym(c),size:16,outline:{color:'#fff',width:2}}:{...arrowSym(c,true),angle:norm(d+180),outline:{color:'#fff',width:2}}}));
+    if(moveSpot)tmp.add(new Graphic({geometry:moveSpot,symbol:{...arrowSym(COLORS.Floating,true),angle:$('mDir').value===''?0:norm(+$('mDir').value+180),outline:{color:'#fff',width:2}}}));
+  }
+  $('fStatus').addEventListener('change',drawPreview);
+
+  // \u2500\u2500 map interaction modes \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  function setBanner(){const t={move:'Click the map to place this sign',aim:'Click a point the sign faces toward',add:'Click the map to place the new sign',mpick:'Click the new spot for the floating sign'}[mode];
+    $('banner').textContent=t?t+'  \u00b7  Esc to cancel':'';$('banner').style.display=t?'block':'none';if(view)view.container.style.cursor=t?'crosshair':'';
+    $('moveBtn').classList.toggle('on',mode==='move');$('aimBtn').classList.toggle('on',mode==='aim');$('mPick').classList.toggle('on',mode==='mpick')}
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mode){mode=null;setBanner()}});
+  $('moveBtn').onclick=()=>{if(!orig)return;mode=mode==='move'?null:'move';setBanner()};
+  $('aimBtn').onclick=()=>{if(!orig||!pending.geometry)return;mode=mode==='aim'?null:'aim';setBanner()};
+  $('addBtn').onclick=()=>{if(dirty()&&!confirm('Discard unsaved changes?'))return;
+    if(!editable){toast('Your account cannot add records.',false);return}
+    const blank={attributes:{[oidF]:null,Status:'Fixed'},geometry:null};openRec(blank,true);
+    $('pTitle').textContent='New sign record';$('pMeta').textContent='Place it on the map, then fill in the record.';mode='add';setBanner()};
+
+  function bearing(from,to){const r=Math.PI/180,f1=from.latitude*r,f2=to.latitude*r,dl=(to.longitude-from.longitude)*r;
+    return norm(Math.atan2(Math.sin(dl)*Math.cos(f2),Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl))/r)}
+  const wgs=p=>p.spatialReference&&p.spatialReference.isWGS84?p:projection.project(p,{wkid:4326});
+
+  async function onMapClick(ev){
+    const pt=wgs(ev.mapPoint);
+    if(mode==='move'||mode==='add'){pending.geometry=new Point({longitude:pt.longitude,latitude:pt.latitude});if(mode==='add')orig.geometry=null;mode=null;setBanner();drawPreview();return}
+    if(mode==='aim'){setDir(Math.round(bearing(wgs(pending.geometry),pt)),true);mode=null;setBanner();return}
+    if(mode==='mpick'){moveSpot=new Point({longitude:pt.longitude,latitude:pt.latitude});$('mSpot').textContent='New spot: '+pt.latitude.toFixed(6)+', '+pt.longitude.toFixed(6);$('mSave').disabled=false;mode=null;setBanner();drawPreview();return}
+    const h=await view.hitTest(ev,{include:[layer]});const g=h.results.find(r=>r.graphic&&r.graphic.layer===layer);
+    if(g){const f=recs.find(r=>r.attributes[oidF]===g.graphic.attributes[oidF]);if(f)openRec(f)}
+  }
+
+  // \u2500\u2500 record a floating-sign move \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  $('relocBtn').onclick=()=>{if(dirty()){toast('Save or discard the current edits first.',false);return}
+    moveSpot=null;$('moveBox').style.display='';$('mSite').value='';$('mName').value='';$('mDir').value='';$('mSave').disabled=true;$('mSpot').textContent='No spot picked yet.';
+    const d=new Date();d.setMinutes(Math.floor(d.getMinutes()/15)*15,0,0);$('mWhen').value=new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16)};
+  $('mCancel').onclick=()=>{$('moveBox').style.display='none';moveSpot=null;mode=null;setBanner();drawPreview()};
+  $('mPick').onclick=()=>{mode=mode==='mpick'?null:'mpick';setBanner()};
+  $('mDir').addEventListener('input',drawPreview);
+  $('mSave').onclick=async()=>{
+    const sid=$('mSite').value.trim().toUpperCase(),dir=$('mDir').value;let ok=true;
+    const bad=(id,b)=>{$(id).closest('.f').classList.toggle('bad',b);if(b)ok=false};
+    bad('mSite',!SITE_RE.test(sid));bad('mDir',dir!==''&&(+dir<0||+dir>=360));
+    if(!moveSpot||!$('mWhen').value)ok=false;if(!ok){toast('Check the new site ID, direction, time and spot.',false);return}
+    const a=orig.attributes,when=new Date($('mWhen').value).getTime();
+    if(a.StartDate&&when<a.StartDate){toast('The move time is before this placement started.',false);return}
+    const endOld=new Graphic({attributes:{[oidF]:a[oidF],EndDate:when}});
+    const nAttrs={UnitID:a.UnitID,SiteID:sid,LocationName:$('mName').value.trim()||null,Status:'Floating',StartDate:when,EndDate:null,
+      Direction:dir===''?null:Math.round(norm(+dir)*100)/100,FactoryID:a.FactoryID||null,SpeedLimitMPH:null};
+    Object.keys(nAttrs).forEach(k=>{if(!layer.fields.some(f=>f.name===k))delete nAttrs[k]});
+    const add=new Graphic({attributes:nAttrs,geometry:await toLayerGeom(moveSpot)});
+    if(!confirm('End '+(a.SiteID||unitLabel(a.UnitID))+' at '+new Date(when).toLocaleString()+' and start '+sid+'?'))return;
+    $('mSave').disabled=true;
+    try{const r=await layer.applyEdits({updateFeatures:[endOld],addFeatures:[add]});
+      const e=(r.updateFeatureResults[0]||{}).error||(r.addFeatureResults[0]||{}).error;if(e)throw new Error(e.message);
+      sel=r.addFeatureResults[0].objectId;moveSpot=null;toast('Move recorded. Update the dashboard deployment in admin too (until the server reads AGOL).');await loadAll(false)}
+    catch(e){toast('Move failed: '+(e.message||e),false);$('mSave').disabled=false}
+  };
+  window.addEventListener('beforeunload',e=>{if(dirty()){e.preventDefault();e.returnValue=''}});
+});
+</script>
+</body>
+</html>
