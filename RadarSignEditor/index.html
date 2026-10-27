@@ -328,7 +328,7 @@ require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/
   }
   function changed(){
     if(!orig)return{};const a=orig.attributes,n=formAttrs(),c={};
-    for(const k in n){if(!layer.fields.some(f=>f.name===k))continue;const o=a[k]==null||a[k]===''?null:(k==='UnitID'?String(unitNum(a[k])).padStart(2,'0'):a[k]);
+    for(const k in n){if(!layer.fields.some(f=>f.name===k))continue;const o0=typeof a[k]==='string'?a[k].trim():a[k];const o=o0==null||o0===''?null:(k==='UnitID'?String(unitNum(o0)).padStart(2,'0'):o0);
       if(k==='StartDate'||k==='EndDate'){if(dateIn(o)!==dateIn(n[k]))c[k]=n[k]}else if(o!==n[k]&&!(typeof o==='number'&&Math.abs(o-n[k])<0.005))c[k]=n[k]}
     return c}
   function geomChanged(){return pending&&pending.geometry&&orig&&orig.geometry&&(Math.abs(pending.geometry.x-orig.geometry.x)>1e-9||Math.abs(pending.geometry.y-orig.geometry.y)>1e-9)}
