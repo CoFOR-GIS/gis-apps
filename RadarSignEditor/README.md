@@ -28,7 +28,9 @@ Auth: OAuth 2.0 redirect (no popup), app ID DhZk7VoirUPP4Sa2. The redirect URI `
 
 - Fix a direction: select the sign, drag the dial or use **Aim on map** (click a point the sign faces), Save.
 - Correct a location: **Move location**, click the map, Save.
-- Floating sign moved: select its current record, **Record a move...**, enter new site ID / direction / time, **Pick new spot on map**, **Save move**. Also record the move in the dashboard admin until the server reads AGOL.
+- Floating sign moved: select its current record, **Record a move...**, enter new site ID / direction / time, **Pick new spot on map**, **Save move**. Nothing else to enter: since Oct. 28, 2026 the dashboard reads placements from this layer (admin "Placements come from" = AGOL). The hourly task `CoFOR Radar AGOL Publish` copies them to the server, and the dashboard rebuilds about 15 s later (run `radar_agol_publish.py --apply` to hurry it).
+- Speed limit: from the road layer `CoFORPW_Road_Public`, field `Speed_Limit`; blank means 30 mph (prima facie). Store the number in **Speed limit (mph)**.
+- Sign-in: click **Allow** on the Esri permission page promptly; if it sits too long it times out and the app must be reloaded.
 - New sign: **+ Add**, click the map, fill the record, Save.
 
-Project record: Traffic Radar handoff guide, Sections 23-24 (`C:\GIS\Traffic\_project\Traffic_Radar_Handoff_Guide.md`).
+Project records (in `C:\GIS\Traffic\_project\`): `Traffic_Radar_User_and_Admin_Guide.md` (operations reference; procedures P-05 to P-08 cover this app) and `Traffic_Radar_Handoff_Guide.md` (history; Sections 23-26).
