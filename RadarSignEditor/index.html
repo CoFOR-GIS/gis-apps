@@ -170,8 +170,8 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
         <div class="f"><label for="fLimit">Speed limit (mph)</label><input id="fLimit" type="number" min="5" max="85" step="5"><div class="err">5 to 85</div></div>
       </div>
       <div class="two">
-        <div class="f"><label for="fStart">Start</label><input id="fStart" type="date"></div>
-        <div class="f"><label for="fEnd">End</label><input id="fEnd" type="date"><div class="err">End is before start</div></div>
+        <div class="f"><label for="fStart">Start (local time)</label><input id="fStart" type="datetime-local"></div>
+        <div class="f"><label for="fEnd">End (local time)</label><input id="fEnd" type="datetime-local"><div class="err">End is before start</div></div>
       </div>
       <div class="two">
         <div class="f"><label for="fFactory">Factory serial</label><input id="fFactory" maxlength="50"></div>
@@ -220,7 +220,8 @@ const unitLabel=v=>{const n=unitNum(v);return n==null?'\u2014':'RS'+String(n).pa
 const norm=b=>{b=Number(b);return((b%360)+360)%360};
 const compass=b=>['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(norm(b)/22.5)%16];
 const dateIn=ms=>ms?new Date(ms).toISOString().slice(0,10):'';
-const dateOut=s=>s?Date.UTC(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10),12):null;
+const dtIn=ms=>ms?new Date(ms-new Date(ms).getTimezoneOffset()*6e4).toISOString().slice(0,16):'';
+const dtOut=s=>s?new Date(s).getTime():null;
 function toast(t,ok=true){const m=$('msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');clearTimeout(m._t);m._t=setTimeout(()=>m.className='msg',ok?3500:9000)}
 
 require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/Portal','esri/Map','esri/views/MapView',
@@ -307,7 +308,7 @@ require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/
     $('pMeta').textContent=(iv?(iv.Brand||'')+' '+(iv.Model||''):'')+(a.Status?' \u00b7 '+a.Status:'');
     $('fSite').value=a.SiteID||'';$('fUnit').value=a.UnitID!=null?unitLabel(a.UnitID):'';$('fName').value=a.LocationName||'';
     $('fStatus').value=a.Status||'Fixed';$('fLimit').value=a.SpeedLimitMPH!=null?a.SpeedLimitMPH:'';
-    $('fStart').value=dateIn(a.StartDate);$('fEnd').value=dateIn(a.EndDate);$('fFactory').value=a.FactoryID||'';$('fDep').value=a.DeploymentID||'';$('fNotes').value=a.Notes||'';
+    $('fStart').value=dtIn(a.StartDate);$('fEnd').value=dtIn(a.EndDate);$('fFactory').value=a.FactoryID||'';$('fDep').value=a.DeploymentID||'';$('fNotes').value=a.Notes||'';
     setDir(a.Direction,false);
     $('editInfo').textContent=a.EditDate?'Last edited '+new Date(a.EditDate).toLocaleString()+(a.Editor?' by '+a.Editor:''):'';
     $('inv').innerHTML=iv?['UnitName','Brand','Model','Status','DateActive'].map(k=>'<div><span>'+k+':</span> '+esc(k==='DateActive'?dateIn(iv[k]):iv[k]||'\u2014')+'</div>').join(''):'No inventory row for '+unitLabel(a.UnitID)+'.';
@@ -323,13 +324,13 @@ require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/
   function formAttrs(){
     return{SiteID:$('fSite').value.trim().toUpperCase()||null,UnitID:(()=>{const n=unitNum($('fUnit').value);return n==null?null:String(n).padStart(2,'0')})(),
       LocationName:$('fName').value.trim()||null,Status:$('fStatus').value,SpeedLimitMPH:$('fLimit').value===''?null:+$('fLimit').value,
-      StartDate:dateOut($('fStart').value),EndDate:dateOut($('fEnd').value),FactoryID:$('fFactory').value.trim()||null,
+      StartDate:dtOut($('fStart').value),EndDate:dtOut($('fEnd').value),FactoryID:$('fFactory').value.trim()||null,
       DeploymentID:$('fDep').value.trim()||null,Notes:$('fNotes').value.trim()||null,Direction:$('fDir').value===''?null:Math.round(norm(+$('fDir').value)*100)/100}
   }
   function changed(){
     if(!orig)return{};const a=orig.attributes,n=formAttrs(),c={};
     for(const k in n){if(!layer.fields.some(f=>f.name===k))continue;const o0=typeof a[k]==='string'?a[k].trim():a[k];const o=o0==null||o0===''?null:(k==='UnitID'?String(unitNum(o0)).padStart(2,'0'):o0);
-      if(k==='StartDate'||k==='EndDate'){if(dateIn(o)!==dateIn(n[k]))c[k]=n[k]}else if(o!==n[k]&&!(typeof o==='number'&&Math.abs(o-n[k])<0.005))c[k]=n[k]}
+      if(k==='StartDate'||k==='EndDate'){if(dtIn(o)!==dtIn(n[k]))c[k]=n[k]}else if(o!==n[k]&&!(typeof o==='number'&&Math.abs(o-n[k])<0.005))c[k]=n[k]}
     return c}
   function geomChanged(){return pending&&pending.geometry&&orig&&orig.geometry&&(Math.abs(pending.geometry.x-orig.geometry.x)>1e-9||Math.abs(pending.geometry.y-orig.geometry.y)>1e-9)}
   function dirty(){return !!orig&&(orig.attributes[oidF]==null||Object.keys(changed()).length>0||geomChanged())}
