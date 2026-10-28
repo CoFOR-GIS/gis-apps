@@ -279,7 +279,7 @@ require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/
     if(sel!=null){const f=recs.find(r=>r.attributes[oidF]===sel);if(f)openRec(f,true);else closePanel()}
   }
 
-  function flags(a){const o=[];if(!a.SiteID)o.push('no site ID');if(a.Direction==null)o.push('no direction');if(!a.LocationName)o.push('no name');return o}
+  function flags(a,f){const o=[];if(f&&!f.geometry)o.push('no location');if(!a.SiteID)o.push('no site ID');if(a.Direction==null)o.push('no direction');if(!a.LocationName)o.push('no name');return o}
   function renderList(){
     const q=$('q').value.trim().toLowerCase();
     const groups={Fixed:[],Floating:[],Retired:[],Other:[]};
@@ -288,7 +288,7 @@ require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/
     for(const[g,arr]of Object.entries(groups)){if(!arr.length)continue;
       arr.sort((x,y)=>(g==='Floating'?(y.attributes.StartDate||0)-(x.attributes.StartDate||0):String(x.attributes.SiteID||'~'+unitLabel(x.attributes.UnitID)).localeCompare(String(y.attributes.SiteID||'~'+unitLabel(y.attributes.UnitID)))));
       h+='<div class="grp">'+(g==='Other'?'No status':g)+' \u00b7 '+arr.length+'</div>';
-      arr.forEach(f=>{const a=f.attributes,fl=flags(a);
+      arr.forEach(f=>{const a=f.attributes,fl=flags(a,f);
         const sub=g==='Floating'?(dateIn(a.StartDate)||'?')+' \u2192 '+(a.EndDate?dateIn(a.EndDate):'now'):(a.LocationName||a.DeploymentID||'');
         h+='<button class="row'+(a[oidF]===sel?' sel':'')+'" data-oid="'+a[oidF]+'"><span class="dot" style="background:'+(COLORS[a.Status]||'#666')+'"></span><span class="t"><div class="sid">'+esc(a.SiteID||'\u2014')+' \u00b7 '+unitLabel(a.UnitID)+'</div><div class="nm">'+esc(sub)+'</div></span>'+(fl.length?'<span class="flag" title="'+esc(fl.join(', '))+'">\u26a0 '+fl.length+'</span>':'')+'</button>'})}
     $('list').innerHTML=h||'<div class="hint" style="padding:10px">No records match.</div>';
@@ -332,7 +332,8 @@ require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/
     for(const k in n){if(!layer.fields.some(f=>f.name===k))continue;const o0=typeof a[k]==='string'?a[k].trim():a[k];const o=o0==null||o0===''?null:(k==='UnitID'?String(unitNum(o0)).padStart(2,'0'):o0);
       if(k==='StartDate'||k==='EndDate'){if(dtIn(o)!==dtIn(n[k]))c[k]=n[k]}else if(o!==n[k]&&!(typeof o==='number'&&Math.abs(o-n[k])<0.005))c[k]=n[k]}
     return c}
-  function geomChanged(){return pending&&pending.geometry&&orig&&orig.geometry&&(Math.abs(pending.geometry.x-orig.geometry.x)>1e-9||Math.abs(pending.geometry.y-orig.geometry.y)>1e-9)}
+  function geomChanged(){if(!pending||!pending.geometry||!orig)return false;if(!orig.geometry)return true; // record had no location yet: any picked point is a change
+    return (Math.abs(pending.geometry.x-orig.geometry.x)>1e-9||Math.abs(pending.geometry.y-orig.geometry.y)>1e-9)}
   function dirty(){return !!orig&&(orig.attributes[oidF]==null||Object.keys(changed()).length>0||geomChanged())}
   function validate(){
     let ok=true;const bad=(id,b)=>{$(id).closest('.f').classList.toggle('bad',b);if(b)ok=false};
@@ -364,7 +365,11 @@ require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/
       const res=(isNew?r.addFeatureResults:r.updateFeatureResults)[0];
       if(res.error)throw new Error(res.error.message||'edit refused');
       if(isNew)sel=res.objectId;
-      toast(isNew?'Sign record added.':'Saved.');mode=null;setBanner();await loadAll(false);
+      const savedOid=isNew?res.objectId:attrs[oidF];
+      mode=null;setBanner();await loadAll(false);
+      const back=recs.find(r=>r.attributes[oidF]===savedOid);
+      if(back&&!back.geometry)toast('Saved, but the record still has no location. Click Move location, click the map and Save again.',false);
+      else toast(isNew?'Sign record added.':'Saved.');
     }catch(e){toast('Save failed: '+(e.details&&e.details.messages?e.details.messages.join('; '):e.message||e),false)}
     finally{$('saveBtn').disabled=false}
   };
