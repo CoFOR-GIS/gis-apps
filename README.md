@@ -77,6 +77,9 @@ Each app folder has its own README with its URL, layers, sign-in and rules.
   - Each project keeps an up-to-date pick-up-cold document in `gis-ops/handoff/<project>/README.md`, plus its app README.
   - Write it so a new person or AI can continue without asking: status, IDs, URLs, decisions, next action and owner.
   - Commit messages say what changed, why, and where.
+- **R5: references must resolve.** Every file named in an instruction is a full GitHub link to the branch where it exists now (`https://github.com/CoFOR-GIS/<repo>/blob/<branch>/<path>`), plus the plain path for after the merge.
+  - If a file is only on an unmerged branch, the instruction says so, and "merge PR #N" comes before any step that uses it.
+  - Before sending, the author checks that every cited file exists at that branch and that every cited PR is in the stated state.
 - **Docs format.** Purpose, Location, Data sources, Procedure, Verification, Rollback, Change log.
 
 ## 5. Verification
@@ -90,3 +93,4 @@ Each app folder has its own README with its URL, layers, sign-in and rules.
 
 ## 7. Change log
 - 2026-11-02 README created. Records rule R1 (https hosting on GitHub Pages; gis.local link/redirect by ChatGPT) and standards R2–R4 (Claude, at Ernie's direction).
+- 2026-11-02 Added R5 (references must resolve before sending) after a checklist was named by path while it existed only on an unmerged gis-ops branch (Claude).

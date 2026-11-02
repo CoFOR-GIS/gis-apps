@@ -24,3 +24,8 @@
 - **R4 continuity:** assume the next reader is a new person or AI with no chat history.
   - Keep the app README and `gis-ops/handoff/<project>/README.md` current at the end of every session, and re-read them to verify.
   - Commit messages state what changed, why and where.
+- **R5 references must resolve (2026-11-02, after Ernie could not find a file Claude named).**
+  - Every file named in an instruction is a full clickable link to where it exists *now*: `https://github.com/CoFOR-GIS/<repo>/blob/<branch>/<path>`. Add the plain path for after the merge.
+  - If the file is only on an unmerged branch, say so in words. Make "merge PR #N" (with its link) the step **before** any step that uses the file; records PRs come first.
+  - Before sending, verify every cited file at that ref (`git fetch` then `git cat-file -e origin/<branch>:<path>`) and every PR's state. Say what was verified.
+  - Never write "in repo X -> path" without a link. Never send an instruction whose referenced file you have not checked.
