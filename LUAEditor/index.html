@@ -282,8 +282,8 @@ if(/^PENDING/.test(CONFIG.editItemId)){
 }else if(typeof require!=='function'){
   gateFail('Cannot load the ArcGIS Maps SDK from js.arcgis.com. Check the network connection, then reload.',false);
 }else require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/Portal','esri/Map','esri/views/MapView',
-  'esri/layers/FeatureLayer','esri/Graphic','esri/widgets/BasemapToggle'],
-(OAuthInfo,IdM,Portal,EsriMap,MapView,FeatureLayer,Graphic,BasemapToggle)=>{
+  'esri/layers/FeatureLayer','esri/Graphic','esri/widgets/BasemapToggle','esri/core/reactiveUtils'],
+(OAuthInfo,IdM,Portal,EsriMap,MapView,FeatureLayer,Graphic,BasemapToggle,reactiveUtils)=>{
   const info=new OAuthInfo({appId:CONFIG.appId,portalUrl:CONFIG.portalUrl,popup:false,flowType:'auto'});
   IdM.registerOAuthInfos([info]);
   const signIn=()=>IdM.getCredential(info.portalUrl+'/sharing');
@@ -370,7 +370,14 @@ if(/^PENDING/.test(CONFIG.editItemId)){
   // ── selection ──────────────────────────────────────────
   function guard(){return !dirty()||confirm('Discard unsaved changes?')}
   function selectOnly(f,zoom){if(!guard()){renderList();return}sel=new Map([[f.attributes[oidF],f]]);openPanel();
-    if(zoom&&f.geometry)view.goTo(zoomTarget(f.geometry)).catch(()=>{})}
+    if(zoom&&f.geometry)zoomToFeature(f.geometry)}
+  // v1.0.2: opening the edit panel narrows the map. Wait until the MapView has its new size before zooming,
+  // otherwise the extent is fitted to the old, wider map and the parcel runs off the edge (single-result search).
+  async function zoomToFeature(g){
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const el=$('map'),w=el.clientWidth,h=el.clientHeight;
+    await Promise.race([reactiveUtils.whenOnce(()=>view.width===w&&view.height===h),new Promise(r=>setTimeout(r,600))]).catch(()=>{});
+    return view.goTo(zoomTarget(g)).catch(()=>{})}
   // Cowork fix 2: polygons zoom to their extent with padding (large parcels no longer fill the map); points keep a street-level zoom
   function zoomTarget(g){return g.extent&&g.extent.width>0?g.extent.clone().expand(1.5):{target:g,zoom:Math.max(view.zoom,17)}}
   function toggleSel(f){if(!guard()){renderList();return}const k=f.attributes[oidF];if(sel.has(k))sel.delete(k);else sel.set(k,f);sel.size?openPanel():closePanel()}

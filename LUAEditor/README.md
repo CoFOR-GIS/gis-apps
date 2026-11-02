@@ -25,7 +25,7 @@ LUAEditor/
   README.md    this file
   tests/       offline tests (fake data only; not used by the app)
     rules.test.js   42 cases for the rules block in index.html (Node 18+, no packages)
-    ui.test.js      29 browser checks against mock-sdk.js (Playwright + Chromium)
+    ui.test.js      31 browser checks against mock-sdk.js (Playwright + Chromium)
     mock-sdk.js     fake ArcGIS SDK and fake parcels for ui.test.js
     smoke.test.js   start screen at 1280 px and 390 px (Playwright)
 ```
@@ -105,7 +105,7 @@ node LUAEditor/tests/ui.test.js
 ```bash
 node LUAEditor/tests/smoke.test.js
 ```
-- Expected: `42 passed, 0 failed`; `29 passed, 0 failed; page errors: []`; the smoke test prints the start-screen text and `hscroll: false` at both widths.
+- Expected: `42 passed, 0 failed`; `31 passed, 0 failed; page errors: []`; the smoke test prints the start-screen text and `hscroll: false` at both widths.
 - The rules test reads the block between `RULES-START` and `RULES-END` in index.html; keep those markers.
 
 **Live (with Ernie's account and go-ahead):**
@@ -124,3 +124,4 @@ node LUAEditor/tests/smoke.test.js
 - 2026-11-02 v1.0.0-rc1: CONFIG.editItemId set to the WO-0008 step 1 editing view 225859c291a94a23b8b9b0a0ddd1c1aa (Ernie). Shows a clear message if the SDK cannot load. Tagged for a test install at gis.local.
 - 2026-11-02 v1.0.0-rc2: offline tests committed in tests/ (rule R3). Hosting moved to GitHub Pages (https://cofor-gis.github.io/gis-apps/LUAEditor/) under rule R1 (Ernie: ArcGIS Online needs an https redirect URI; gis.local is http only). gis.local keeps only a link/redirect, installed by ChatGPT. No logic change.
 - 2026-11-02 v1.0.1: fixes from Cowork's live test (https://github.com/CoFOR-GIS/gis-apps/pull/1#issuecomment-6587541700): (1) acreage and other decimal read-only values shown to 2 decimals; (2) selecting a parcel zooms to its extent with padding (expand 1.5) instead of a fixed close zoom; (3) clearing a connection or master-plan count warns and needs acknowledgement. Tests now 42 rules / 29 browser checks.
+- 2026-11-02 v1.0.2: zoom waits for the map to resize after the edit panel opens. Fixes Cowork's v1.0.1 finding (https://github.com/CoFOR-GIS/gis-apps/pull/3#issuecomment-6588125477): a search with exactly one result ("346 Ammann") zoomed before the map narrowed, so the parcel ran off the right/top edge. The test mock now models the MapView's delayed resize; 2 new browser checks (31 total) fail on v1.0.1 and pass on v1.0.2.
