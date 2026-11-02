@@ -1,0 +1,26 @@
+# Standing instructions for Claude (and any AI agent) in gis-apps
+
+- **This repo is PUBLIC** and is published by GitHub Pages from `main`.
+  - Never commit data, CSV exports, credentials, tokens or personal information.
+  - Never push to `main`. Work on a branch and open a pull request; Ernie merges, and merging makes it live.
+- **R1 hosting (Ernie 2026-11-02).**
+  - Any app that signs in to ArcGIS Online (OAuth app `DhZk7VoirUPP4Sa2`, redirect flow) is served from here at `https://cofor-gis.github.io/gis-apps/<App>/`. That exact URL is registered as a redirect URI.
+  - gis.local is http only and cannot be registered.
+  - gis.local carries only a link and/or redirect to the app. ChatGPT chooses the section home page and installs it (local lane). Ask for it in `gis-ops/log/AI_COORDINATION.md`.
+- **Records live in the private repo `CoFOR-GIS/gis-ops`**: work orders, decisions, logs, handoffs. Read its `CLAUDE.md`, `README.md`, the newest `handoff/CONTEXT_PACKET_*.md` and the project's `handoff/<project>/README.md` before working.
+- **Pattern for new apps:** follow `RadarSignEditor/` or `LUAEditor/`.
+  - Single-file ArcGIS Maps SDK 4.31 app with redirect OAuth.
+  - Local `logo.svg`, also used as the favicon via `<link rel="icon" href="logo.svg">`.
+  - A `CONFIG` block for item IDs.
+  - A README in the 7-section format.
+- **Internal fields** (e.g. `Private_Well`, `Private_Well_Basis`) may appear in internal editors. Nothing from these apps goes into `CoFOR-GIS/gis-maps`.
+- **R2 instructions:** whenever you ask or direct someone to move a project forward, give:
+  - who does it, and prerequisites first;
+  - numbered steps with exact clicks, URLs and values;
+  - the expected result of each step;
+  - what to send back, and how to roll back.
+  - cmd.exe or ArcGIS Pro Python steps include the full script plus a copyable cmd.exe box naming the script path and function. Python only, no hidden PowerShell. Say so when no command is needed.
+- **R3 scripts:** a script integral to a project lives in `<App>/scripts/`, or in `gis-ops/handoff/<project>/scripts/` if private. The project README documents it. No credentials.
+- **R4 continuity:** assume the next reader is a new person or AI with no chat history.
+  - Keep the app README and `gis-ops/handoff/<project>/README.md` current at the end of every session, and re-read them to verify.
+  - Commit messages state what changed, why and where.

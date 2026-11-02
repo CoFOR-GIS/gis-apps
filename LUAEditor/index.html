@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LUA Editor | City of Fair Oaks Ranch</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
+<!--
+  CoFOR LUA Editor  (CoFOR-GIS/gis-apps/LUAEditor)  -  WO-0008, Ref LUA-EDITOR-20261102
+  INTERNAL USE. Served over HTTPS from GitHub Pages: https://cofor-gis.github.io/gis-apps/LUAEditor/
+  (rule R1: ArcGIS sign-in apps need an https redirect URI; gis.local is http only.
+  gis.local only carries a link/redirect to this URL, installed by ChatGPT.)
+  Access is enforced by AGOL: the editing view is shared only to group "LUA Editors".
+  This repo is public: never put data, credentials or tokens in this file.
+  Edits the internal editing view "City of Fair Oaks Ranch LUA (Internal Editing)"
+  (update-only, attribute-only) over the authoritative parcel layer 6745cc19...
+  Private_Well / Private_Well_Basis are internal knowledge (D-018): nothing in
+  this app may be copied into CoFOR-GIS/gis-maps or any public app.
+
+  Rules (WO-0008 field plan + Ernie 2026-11-02):
+   - Only fields the user actually changed are sent; NULL stays NULL; blank is never 0.
+   - Private_Well = Yes needs a Basis; set to No clears the Basis.
+   - FORU + Private_Well = Yes + water > 0 or sewer > 0 is BLOCKED (viewer rule).
+   - Private_Well = Yes on a non-FORU parcel warns.
+   - LotUpdated = today on every save that changes something.
+   - Before every save the records are re-read; stale edits are refused.
+   - Each save downloads a BEFORE/AFTER CSV to this PC (internal data, keep local).
+  Sign-in: redirect OAuth, app ID DhZk7VoirUPP4Sa2.
+-->
+<style>
+:root{--ink:#1F1E1A;--ink2:#2a2924;--ink3:#34322c;--line:#47443b;--accent:#D49A4E;--accent2:#e8b779;--text:#f2eee6;--dim:#b5ad9e;--ok:#7fb069;--warn:#e0a83a;--bad:#e05d4f;--sel:#4fc3d4;--r:8px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--ink);color:var(--text);font-family:Manrope,system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+h1,h2,h3{font-family:'Bricolage Grotesque',Manrope,sans-serif;font-weight:700}
+button,input,select,textarea{font-family:inherit;font-size:13px}
+.hdr{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--ink2);border-bottom:2px solid var(--accent);flex-shrink:0}
+.hdr img{height:38px;width:auto}
+.hdr h1{font-size:18px;line-height:1.1}
+.hdr .sub{font-size:11px;color:var(--dim)}
+.hdr .sp{flex:1}
+.hdr .who{font-size:12px;color:var(--dim);text-align:right}
+.hdr a,.lnk{color:var(--accent2);text-decoration:none}
+.btn{background:var(--ink3);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:#1F1E1A;border-color:var(--accent)}
+.btn.pri:hover{background:var(--accent2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.warnbar{background:rgba(224,168,58,.15);border-bottom:1px solid var(--warn);color:var(--warn);padding:6px 16px;font-size:12px;display:none;flex-shrink:0}
+.app{flex:1;display:flex;min-height:0}
+.side{width:300px;flex-shrink:0;background:var(--ink2);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side .top{padding:12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
+.side .top input{flex:1;min-width:0;background:var(--ink);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:7px 9px}
+.list{overflow:auto;flex:1;padding:6px 8px 16px}
+.grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin:12px 4px 4px}
+.row{display:flex;gap:8px;align-items:center;width:100%;border:1px solid transparent;border-radius:6px;padding:4px 6px}
+.row:hover{background:var(--ink3)}
+.row.sel{background:var(--ink3);border-color:var(--accent)}
+.row input{flex-shrink:0;accent-color:var(--accent)}
+.row button{flex:1;min-width:0;text-align:left;background:none;border:none;color:var(--text);cursor:pointer;padding:2px 0}
+.row .ad{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mapwrap{flex:1;position:relative;min-width:0}
+#map{position:absolute;inset:0}
+.legend{position:absolute;left:12px;bottom:26px;background:rgba(31,30,26,.92);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font-size:11px;color:var(--dim);line-height:1.6;z-index:5;max-width:240px}
+.panel{width:380px;flex-shrink:0;background:var(--ink2);border-left:1px solid var(--line);overflow:auto;display:none}
+.panel.open{display:block}
+.panel .ph{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:8px}
+.panel .ph h2{font-size:17px;word-break:break-word}
+.panel .ph .meta{font-size:11px;color:var(--dim);margin-top:2px}
+.panel .ph .x{margin-left:auto;background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;line-height:1}
+.sec{padding:12px 16px;border-bottom:1px solid var(--line)}
+.sec h3{font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;font-family:Manrope,sans-serif}
+.f{margin-bottom:9px}
+.f label{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--dim);margin-bottom:3px}
+.f label .tick{display:none;accent-color:var(--accent)}
+.batch .f label .tick{display:inline-block}
+.f input[type=text],.f select{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:7px 9px}
+.f input:focus,.f select:focus{outline:none;border-color:var(--accent)}
+.f input:disabled,.f select:disabled{opacity:.4}
+.f .err{color:var(--bad);font-size:11px;margin-top:2px;display:none}
+.f.bad input[type=text],.f.bad select{border-color:var(--bad)}.f.bad .err{display:block}
+.f.hide{display:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ro{font-size:12px;line-height:1.7}
+.ro span{color:var(--dim)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:11px;color:var(--dim);line-height:1.5;margin-top:6px}
+.errbox{display:none;background:rgba(224,93,79,.12);border:1px solid var(--bad);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:12px;line-height:1.5}
+.selList{font-size:12px;line-height:1.7;max-height:140px;overflow:auto}
+.selList button{background:none;border:none;color:var(--dim);cursor:pointer;margin-left:6px}
+.msg{position:fixed;right:16px;bottom:16px;max-width:400px;padding:10px 14px;border-radius:var(--r);font-weight:600;z-index:60;display:none;box-shadow:0 6px 20px rgba(0,0,0,.45);white-space:pre-line}
+.msg.ok{background:var(--ok);color:#111;display:block}.msg.err{background:var(--bad);color:#fff;display:block}
+.gate,.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px}
+.gate{background:var(--ink);z-index:100;text-align:center}
+.gate .box{max-width:460px}
+.gate h2{margin:12px 0 6px}.gate p{color:var(--dim);line-height:1.6;margin-bottom:14px}
+.modal{background:rgba(0,0,0,.6);z-index:80;display:none}
+.modal .box{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);max-width:640px;width:100%;max-height:85vh;overflow:auto;padding:16px}
+.modal h2{font-size:17px;margin-bottom:8px}
+.modal table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+.modal th,.modal td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
+.modal th{color:var(--dim);font-weight:600}
+.modal tr.addr td{color:var(--accent2);font-weight:700}
+.modal .pid{color:var(--dim)}
+.modal .wn{background:rgba(224,168,58,.12);border:1px solid var(--warn);border-radius:6px;padding:8px 10px;margin:8px 0;color:var(--warn);font-size:12px;line-height:1.5}
+.modal .wn label{display:flex;gap:6px;align-items:center;margin-top:6px;color:var(--text)}
+@media (max-width:900px){
+  .app{flex-direction:column;overflow:auto}
+  .side{width:100%;max-height:30vh;border-right:none;border-bottom:1px solid var(--line)}
+  .mapwrap{min-height:50vh;flex:none;height:50vh}
+  .panel{width:100%;border-left:none}
+  .hdr .sub{display:none}
+}
+</style>
+</head>
+<body>
+<div class="gate" id="gate"><div class="box">
+  <img src="logo.svg" alt="City of Fair Oaks Ranch" style="height:64px">
+  <h2>LUA Editor</h2>
+  <p id="gateMsg">Signing in to ArcGIS Online&#x2026;</p>
+  <button class="btn pri" id="gateBtn" style="display:none">Sign in</button>
+</div></div>
+
+<div class="hdr">
+  <img src="logo.svg" alt="City of Fair Oaks Ranch">
+  <div><h1>LUA Editor</h1><div class="sub">City of Fair Oaks Ranch &#xb7; Public Works &#xb7; internal parcel LUA records</div></div>
+  <div class="sp"></div>
+  <a class="lnk" id="viewerLink" href="#" target="_blank" rel="noopener" title="Opens only on the City network">LUA viewer &#x2197;</a>
+  <div class="who"><div id="who">&#x2014;</div><a href="#" id="signOut">Sign out</a></div>
+</div>
+<div class="warnbar" id="warnbar"></div>
+
+<div class="app">
+  <div class="side">
+    <div class="top"><input id="q" type="search" placeholder="Address, PropID or #OID" autocomplete="off"><button class="btn" id="qBtn">Find</button></div>
+    <div class="list" id="list"><div class="hint" style="padding:10px">Search, or click a parcel on the map. Ctrl/Shift-click or tick boxes to select several.</div></div>
+  </div>
+  <div class="mapwrap">
+    <div id="map"></div>
+    <div class="legend">Click a parcel to edit it.<br>Ctrl/Shift-click adds or removes parcels for a batch edit.</div>
+  </div>
+  <div class="panel" id="panel">
+    <div class="ph"><div><h2 id="pTitle">&#x2014;</h2><div class="meta" id="pMeta"></div></div><button class="x" id="pClose" title="Close">&#xd7;</button></div>
+    <div class="sec" id="selSec" style="display:none"><h3>Selected parcels</h3><div class="selList" id="selList"></div>
+      <div class="hint">Tick a field to set it to the same value on every selected parcel. Unticked fields are not changed. Address is edited one parcel at a time.</div></div>
+    <div class="sec" id="roSec"><h3>Parcel (read only)</h3><div class="ro" id="ro">&#x2014;</div></div>
+    <div class="sec" id="editSec">
+      <h3>LUA record</h3>
+      <div class="errbox" id="errBox"></div>
+      <div id="form"></div>
+      <div class="acts"><button class="btn pri" id="saveBtn">Review and save&#x2026;</button><button class="btn" id="cancelBtn">Discard changes</button></div>
+      <div class="hint">Saving also sets Lot Updated to today and downloads a before/after CSV to this PC. The CSV holds internal data: keep it on City storage only.</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="sum"><div class="box">
+  <h2 id="sumTitle">Review changes</h2>
+  <div id="sumBody"></div>
+  <div class="acts" style="margin-top:12px"><button class="btn pri" id="sumOk">Save</button><button class="btn" id="sumCancel">Back</button></div>
+</div></div>
+<div class="msg" id="msg"></div>
+
+<script>
+const CONFIG = {
+  portalUrl: 'https://fairoaksranch.maps.arcgis.com',
+  appId: 'DhZk7VoirUPP4Sa2',
+  // WO-0008 step 1: "City of Fair Oaks Ranch LUA (Internal Editing)" view. Set when Ernie supplies it.
+  editItemId: '225859c291a94a23b8b9b0a0ddd1c1aa',
+  editLayerId: 0,
+  editFields: ['ADDRESS','textImproved','LUA','Num__of_Connections_Water','Num__of_Connections_Sewer',
+               'MasterWater','MasterWastewater','Private_Well','Private_Well_Basis'],
+  autoFields: ['LotUpdated'],                     // = today on every save that changes something
+  readOnlyFields: ['Subdivision','Unit','Lot','COUNTY','Pressure_Zone','Lot_Acreage','PropID','EditDate','Editor'],
+  excludedFields: ['Num__Remaining_Water_Connection','Num__Remaining_Sewer_Connection','ImprovedValue'], // never read into form, never sent
+  intFields: ['Num__of_Connections_Water','Num__of_Connections_Sewer','MasterWater','MasterWastewater'],
+  domainFields: ['textImproved','LUA'],
+  wellBasisValues: ['Meter analysis','Billing verified','Staff confirmed','Owner reported'],
+  foruValue: 'FORU',
+  addressUpperCase: 'auto',                       // 'auto' = keep upper case when the parcel's address is already upper case
+  viewerUrl: 'http://gis.local/LUA/',             // header link (internal; fine in gis-apps)
+  maxResults: 50,
+  center: [-98.645, 29.74], zoom: 14
+};
+
+/* RULES-START  (pure functions; no DOM, no SDK. Tested offline.) */
+const LUARules=(()=>{
+  const S=v=>{if(v==null)return null;if(typeof v==='string'){const t=v.trim();return t===''?null:t}return v};
+  const I=v=>{if(v==null)return null;if(typeof v==='number')return v;const t=String(v).trim();if(t==='')return null;return /^-?\d+(\.\d+)?$/.test(t)?Number(t):NaN};
+  const norm=(cfg,k,v)=>cfg.intFields.includes(k)?I(v):S(v);
+  const same=(a,b)=>a===b||(typeof a==='number'&&typeof b==='number'&&isNaN(a)&&isNaN(b));
+  const isUpper=s=>typeof s==='string'&&/[A-Za-z]/.test(s)&&s===s.toUpperCase();
+  // before: the record as loaded. proposed: {field: raw value} for the fields the user is setting.
+  // ctx: {domains:{field:[codes]}, addrMax, labels:{field:label}}
+  function plan(cfg,before,proposed,ctx){
+    ctx=ctx||{};const L=k=>(ctx.labels&&ctx.labels[k])||k;
+    const ch={},errors=[],warnings=[];
+    for(const k of Object.keys(proposed)){
+      if(!cfg.editFields.includes(k))continue;
+      let nv=norm(cfg,k,proposed[k]);const ov=norm(cfg,k,before[k]);
+      if(k==='ADDRESS'&&nv!=null&&(cfg.addressUpperCase===true||(cfg.addressUpperCase==='auto'&&isUpper(ov))))nv=nv.toUpperCase();
+      if(!same(nv,ov))ch[k]=nv}
+    if(ch.Private_Well==='No'){if(S(before.Private_Well_Basis)!=null)ch.Private_Well_Basis=null;else delete ch.Private_Well_Basis}
+    const n=Object.keys(ch).length;
+    const after={};for(const k of cfg.editFields)after[k]=(k in ch)?ch[k]:norm(cfg,k,before[k]);
+    if(!n)return{changes:ch,errors,warnings,after};
+    const E=(k,m)=>errors.push({k,msg:m}),W=(k,m)=>warnings.push({k,msg:m});
+    for(const k of cfg.intFields)if(k in ch&&ch[k]!==null&&!(Number.isInteger(ch[k])&&ch[k]>=0))E(k,L(k)+': whole number 0 or more, or blank');
+    for(const k of cfg.domainFields||[])if(k in ch){
+      if(ch[k]===null)E(k,L(k)+': choose a value');
+      else{const d=ctx.domains&&ctx.domains[k];if(d&&d.length&&!d.includes(ch[k]))E(k,L(k)+': "'+ch[k]+'" is not in the list')}}
+    if('Private_Well' in ch&&ch.Private_Well!=='Yes'&&ch.Private_Well!=='No')E('Private_Well',L('Private_Well')+': choose Yes or No');
+    if('ADDRESS' in ch){if(ch.ADDRESS===null)W('ADDRESS','Address will be cleared.');
+      else if(ctx.addrMax&&ch.ADDRESS.length>ctx.addrMax)E('ADDRESS','Address: at most '+ctx.addrMax+' characters')}
+    const pw=after.Private_Well,basis=after.Private_Well_Basis,w=after.Num__of_Connections_Water,s=after.Num__of_Connections_Sewer;
+    const wellTouched=['Private_Well','Private_Well_Basis'].some(k=>k in ch);
+    const svcTouched=wellTouched||['LUA','Num__of_Connections_Water','Num__of_Connections_Sewer'].some(k=>k in ch);
+    const badBasis=pw==='Yes'&&!cfg.wellBasisValues.includes(basis);
+    if(badBasis){if(wellTouched)E('Private_Well_Basis','Private well = Yes needs a basis ('+cfg.wellBasisValues.join(', ')+')');
+      else W('Private_Well_Basis','Existing record: private well = Yes has no valid basis.')}
+    if(pw!=='Yes'&&'Private_Well_Basis' in ch&&ch.Private_Well_Basis!==null)E('Private_Well_Basis','A basis is only recorded when private well = Yes');
+    const conflict=pw==='Yes'&&after.LUA===cfg.foruValue&&((w>0)||(s>0));
+    if(conflict){const m='FORU parcel flagged as a private well cannot also have water or sewer connections (LUA viewer rule). Set connections to 0, or private well to No.';
+      if(svcTouched)E('Private_Well',m);else W('Private_Well','Existing record conflicts with the viewer rule: '+m)}
+    if(pw==='Yes'&&after.LUA!==cfg.foruValue&&(wellTouched||'LUA' in ch))W('Private_Well','Private well = Yes on a parcel whose LUA is "'+(after.LUA==null?'blank':after.LUA)+'", not '+cfg.foruValue+'. Check this is intended.');
+    return{changes:ch,errors,warnings,after}}
+  // value for LotUpdated by field type; undefined = cannot set
+  function lotValue(field,now){
+    if(!field)return undefined;now=now||new Date();
+    const y=now.getFullYear(),m=now.getMonth(),d=now.getDate(),p=x=>String(x).padStart(2,'0');
+    if(field.type==='date')return Date.UTC(y,m,d,12);           // noon UTC: same calendar day in CT
+    if(field.type==='date-only')return y+'-'+p(m+1)+'-'+p(d);
+    if(field.type==='string'){const v=p(m+1)+'/'+p(d)+'/'+y;return field.length&&v.length>field.length?undefined:v}
+    return undefined}
+  // edit payload: OID + allowed changed fields + LotUpdated. Nothing else ever.
+  function payload(cfg,oidField,oid,changes,layerNames,lotField,lotVal){
+    const a={[oidField]:oid};
+    for(const k of Object.keys(changes))if(cfg.editFields.includes(k)&&layerNames.has(k))a[k]=changes[k];
+    if(lotField&&lotVal!==undefined&&layerNames.has(lotField)&&cfg.autoFields.includes(lotField))a[lotField]=lotVal;
+    return a}
+  // true when the server copy differs from what the user started from
+  function isStale(cfg,loaded,fresh,editDateField){
+    if(editDateField&&(loaded[editDateField]||null)!==(fresh[editDateField]||null))return true;
+    return cfg.editFields.some(k=>!same(norm(cfg,k,loaded[k]),norm(cfg,k,fresh[k])))}
+  function csv(rows){
+    const cell=v=>{let s=v==null?'':String(v);if(/^[=+\-@]/.test(s))s="'"+s;return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+    return rows.map(r=>r.map(cell).join(',')).join('\r\n')+'\r\n'}
+  const differs=(cfg,k,a,b)=>!same(norm(cfg,k,a),norm(cfg,k,b));
+  return{plan,lotValue,payload,isStale,csv,norm,differs}
+})();
+/* RULES-END */
+</script>
+<script src="https://js.arcgis.com/4.31/"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function toast(t,ok=true){const m=$('msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');clearTimeout(m._t);m._t=setTimeout(()=>m.className='msg',ok?4000:12000)}
+function gateFail(t,showBtn){$('gate').style.display='';$('gateMsg').textContent=t;$('gateBtn').style.display=showBtn?'':'none'}
+$('viewerLink').href=CONFIG.viewerUrl;
+
+const FORM=[
+  {k:'ADDRESS',label:'Address',kind:'text',batch:false},
+  {k:'textImproved',label:'Parcel status',kind:'domain'},
+  {k:'LUA',label:'LUA',kind:'domain'},
+  {k:'Num__of_Connections_Water',label:'Water connections',kind:'int',pair:1},
+  {k:'Num__of_Connections_Sewer',label:'Sewer connections',kind:'int',pair:2},
+  {k:'MasterWater',label:'Master plan water',kind:'int',pair:1},
+  {k:'MasterWastewater',label:'Master plan wastewater',kind:'int',pair:2},
+  {k:'Private_Well',label:'Private well',kind:'pw'},
+  {k:'Private_Well_Basis',label:'Private well basis',kind:'basis'}
+];
+const LABELS=Object.fromEntries(FORM.map(f=>[f.k,f.label]));
+
+if(/^PENDING/.test(CONFIG.editItemId)){
+  gateFail('Editing view not configured yet (WO-0008 step 1). Set CONFIG.editItemId in index.html.',false);
+}else if(typeof require!=='function'){
+  gateFail('Cannot load the ArcGIS Maps SDK from js.arcgis.com. Check the network connection, then reload.',false);
+}else require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/Portal','esri/Map','esri/views/MapView',
+  'esri/layers/FeatureLayer','esri/Graphic','esri/widgets/BasemapToggle'],
+(OAuthInfo,IdM,Portal,EsriMap,MapView,FeatureLayer,Graphic,BasemapToggle)=>{
+  const info=new OAuthInfo({appId:CONFIG.appId,portalUrl:CONFIG.portalUrl,popup:false,flowType:'auto'});
+  IdM.registerOAuthInfos([info]);
+  const signIn=()=>IdM.getCredential(info.portalUrl+'/sharing');
+  $('gateBtn').onclick=signIn;
+  $('signOut').onclick=e=>{e.preventDefault();IdM.destroyCredentials();location.reload()};
+  IdM.checkSignInStatus(info.portalUrl+'/sharing').catch(()=>signIn()).then(start).catch(err=>{
+    gateFail('Sign-in is needed to edit LUA records. '+(err&&err.message?'('+err.message+')':''),true)});
+
+  let layer,view,lv,hl=null,oidF='OBJECTID',editDateF=null,editorF=null,lotField=null,names=new Set(),fieldBy={},ctx={},user='';
+  let results=[],sel=new Map(),mode=null,busy=false;
+
+  async function start(){
+    const portal=new Portal({url:CONFIG.portalUrl});await portal.load();
+    user=portal.user?portal.user.username:'';
+    $('who').textContent=portal.user?portal.user.fullName||portal.user.username:'Signed in';
+    layer=new FeatureLayer({portalItem:{id:CONFIG.editItemId},layerId:CONFIG.editLayerId,outFields:[],popupEnabled:false,
+      renderer:{type:'simple',symbol:{type:'simple-fill',color:[212,154,78,0.06],outline:{color:[212,154,78,0.75],width:0.8}}}});
+    try{await layer.load()}
+    catch(e){gateFail('Cannot open the LUA editing view with this account. Access comes from the AGOL group "LUA Editors"; ask Ernie. ('+(e.message||e)+')',false);return}
+    oidF=layer.objectIdField;
+    layer.fields.forEach(f=>{names.add(f.name);fieldBy[f.name]=f});
+    const efi=layer.editFieldsInfo||{};editDateF=efi.editDateField||(names.has('EditDate')?'EditDate':null);editorF=efi.editorField||(names.has('Editor')?'Editor':null);
+    const missing=CONFIG.editFields.filter(k=>!names.has(k));
+    if(missing.length){gateFail('The editing view is missing field(s): '+missing.join(', ')+'. Fix the view (WO-0008 step 1) before using the editor.',false);return}
+    const ops=(layer.capabilities&&layer.capabilities.operations)||{},ed=(layer.capabilities&&layer.capabilities.editing)||{};
+    if(!ops.supportsUpdate){gateFail('Your account can view but not update this layer. Editing rights come from the "LUA Editors" group.',false);return}
+    const warns=[];
+    if(ops.supportsAdd)warns.push('adds');if(ops.supportsDelete)warns.push('deletes');if(ed.supportsGeometryUpdate)warns.push('geometry edits');
+    lotField=CONFIG.autoFields.map(k=>fieldBy[k]).find(Boolean)||null;
+    const wb=[];
+    if(warns.length)wb.push('The editing view still allows '+warns.join(', ')+'. It should be update-only, attribute-only (WO-0008 step 1). This app never uses them.');
+    if(!lotField||LUARules.lotValue(lotField)===undefined)wb.push('Lot Updated cannot be set automatically (field missing or type '+(lotField?lotField.type:'none')+'). Saves still work.');
+    if(wb.length){$('warnbar').textContent='⚠ '+wb.join('  ·  ');$('warnbar').style.display='block'}
+    // never load excluded fields
+    layer.outFields=outFields();
+    ctx={labels:LABELS,addrMax:fieldBy.ADDRESS&&fieldBy.ADDRESS.length||null,domains:{}};
+    for(const k of CONFIG.domainFields){const d=fieldBy[k]&&fieldBy[k].domain;if(d&&d.codedValues)ctx.domains[k]=d.codedValues.map(c=>c.code)}
+    view=new MapView({container:'map',map:new EsriMap({basemap:'dark-gray-vector',layers:[layer]}),center:CONFIG.center,zoom:CONFIG.zoom,popupEnabled:false,constraints:{snapToZoom:false}});
+    view.ui.add(new BasemapToggle({view,nextBasemap:'hybrid'}),'bottom-right');
+    lv=await view.whenLayerView(layer);
+    view.on('click',onMapClick);
+    $('gate').style.display='none';
+  }
+  function outFields(){
+    const want=[oidF,...CONFIG.editFields,...CONFIG.autoFields,...CONFIG.readOnlyFields,editDateF,editorF].filter(Boolean);
+    return [...new Set(want)].filter(k=>names.has(k)&&!CONFIG.excludedFields.includes(k))}
+  const sqlStr=s=>"'"+String(s).replace(/'/g,"''")+"'";
+  async function query(where,geom=true){
+    const r=await layer.queryFeatures({where,outFields:outFields(),returnGeometry:geom,outSpatialReference:view.spatialReference,num:CONFIG.maxResults,orderByFields:names.has('ADDRESS')?['ADDRESS']:undefined});
+    return r.features}
+  async function byIds(ids,geom=true){
+    if(!ids.length)return[];
+    const r=await layer.queryFeatures({objectIds:ids,outFields:outFields(),returnGeometry:geom,outSpatialReference:view.spatialReference});
+    return r.features}
+
+  // ── search ─────────────────────────────────────────────
+  async function doSearch(){
+    const q=$('q').value.trim();if(!q){results=[];renderList();return}
+    let where;
+    if(/^#\d+$/.test(q))where=oidF+' = '+q.slice(1);
+    else{const parts=[];
+      if(names.has('ADDRESS'))parts.push('UPPER(ADDRESS) LIKE '+sqlStr('%'+q.toUpperCase()+'%'));
+      const pf=fieldBy.PropID;
+      if(pf){if(pf.type==='string')parts.push('PropID = '+sqlStr(q));else if(/^\d+$/.test(q))parts.push('PropID = '+q)}
+      where=parts.length?parts.join(' OR '):'1=0'}
+    try{results=await query(where);renderList(results.length>=CONFIG.maxResults);
+      if(results.length===1)selectOnly(results[0],true)}
+    catch(e){toast('Search failed: '+(e.message||e),false)}
+  }
+  $('qBtn').onclick=doSearch;$('q').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch()});
+  const addrOf=a=>a.ADDRESS||'(no address)';
+  const subOf=a=>['PropID '+(a.PropID==null?'—':a.PropID),a.LUA||null,'#'+a[oidF]].filter(Boolean).join(' · ');
+  function renderList(capped){
+    const shown=new Map(results.map(f=>[f.attributes[oidF],f]));sel.forEach((f,k)=>{if(!shown.has(k))shown.set(k,f)});
+    if(!shown.size){$('list').innerHTML='<div class="hint" style="padding:10px">'+($('q').value.trim()?'No parcels match.':'Search, or click a parcel on the map.')+'</div>';return}
+    let h='<div class="grp">'+results.length+' found'+(capped?' (first '+CONFIG.maxResults+')':'')+(sel.size?' · '+sel.size+' selected':'')+'</div>';
+    shown.forEach((f,oid)=>{const a=f.attributes;
+      h+='<div class="row'+(sel.has(oid)?' sel':'')+'"><input type="checkbox" data-oid="'+oid+'"'+(sel.has(oid)?' checked':'')+' title="Add to selection"><button data-oid="'+oid+'"><div class="ad">'+esc(addrOf(a))+'</div><div class="nm">'+esc(subOf(a))+'</div></button></div>'});
+    $('list').innerHTML=h;
+    $('list').querySelectorAll('button[data-oid]').forEach(b=>b.onclick=()=>{const f=shown.get(+b.dataset.oid);if(f)selectOnly(f,true)});
+    $('list').querySelectorAll('input[data-oid]').forEach(c=>c.onchange=()=>{const f=shown.get(+c.dataset.oid);if(f)toggleSel(f)});
+  }
+
+  // ── selection ──────────────────────────────────────────
+  function guard(){return !dirty()||confirm('Discard unsaved changes?')}
+  function selectOnly(f,zoom){if(!guard()){renderList();return}sel=new Map([[f.attributes[oidF],f]]);openPanel();
+    if(zoom&&f.geometry)view.goTo({target:f.geometry,zoom:Math.max(view.zoom,17)}).catch(()=>{})}
+  function toggleSel(f){if(!guard()){renderList();return}const k=f.attributes[oidF];if(sel.has(k))sel.delete(k);else sel.set(k,f);sel.size?openPanel():closePanel()}
+  async function onMapClick(ev){
+    const h=await view.hitTest(ev,{include:[layer]});const g=h.results.find(r=>r.graphic&&r.graphic.layer===layer);
+    if(!g)return;const oid=g.graphic.attributes[oidF];
+    const add=ev.native&&(ev.native.ctrlKey||ev.native.shiftKey||ev.native.metaKey);
+    try{const [f]=await byIds([oid]);if(!f)return;add?toggleSel(f):selectOnly(f,false)}catch(e){toast('Could not read parcel #'+oid+': '+(e.message||e),false)}
+  }
+  function setHL(){if(hl){hl.remove();hl=null}if(lv&&sel.size)hl=lv.highlight([...sel.keys()])}
+  function closePanel(){sel=new Map();mode=null;$('panel').classList.remove('open');setHL();renderList()}
+  $('pClose').onclick=()=>{if(guard())closePanel()};
+  $('cancelBtn').onclick=()=>{openPanel()};
+
+  // ── panel / form ───────────────────────────────────────
+  const fmtDate=v=>v==null?'—':(typeof v==='number'?new Date(v).toLocaleString():String(v));
+  function openPanel(){
+    mode=sel.size>1?'batch':'single';const fs=[...sel.values()];const a=fs[0].attributes;
+    $('editSec').classList.toggle('batch',mode==='batch');
+    if(mode==='single'){
+      $('pTitle').textContent=addrOf(a);$('pMeta').textContent=subOf(a);$('selSec').style.display='none';$('roSec').style.display='';
+      const ro=CONFIG.readOnlyFields.filter(k=>names.has(k)&&k!==editDateF&&k!==editorF);
+      $('ro').innerHTML=ro.map(k=>'<div><span>'+esc((fieldBy[k].alias||k))+':</span> '+esc(a[k]==null?'—':(fieldBy[k].type==='date'?fmtDate(a[k]):a[k]))+'</div>').join('')+
+        (lotField?'<div><span>'+esc(lotField.alias||lotField.name)+':</span> '+esc(lotField.type==='date'?(a[lotField.name]==null?'—':new Date(a[lotField.name]).toLocaleDateString(undefined,{timeZone:'UTC'})):(a[lotField.name]==null?'—':a[lotField.name]))+'</div>':'')+
+        '<div class="hint">Last edited '+esc(fmtDate(editDateF?a[editDateF]:null))+(editorF&&a[editorF]?' by '+esc(a[editorF]):'')+'</div>';
+    }else{
+      $('pTitle').textContent=fs.length+' parcels selected';$('pMeta').textContent='Batch edit: same value on every selected parcel';
+      $('selSec').style.display='';$('roSec').style.display='none';
+      $('selList').innerHTML=fs.map(f=>'<div>'+esc(addrOf(f.attributes))+' <span class="pid" style="color:var(--dim)">#'+f.attributes[oidF]+'</span><button data-oid="'+f.attributes[oidF]+'" title="Remove from selection">×</button></div>').join('');
+      $('selList').querySelectorAll('button').forEach(b=>b.onclick=()=>{const f=sel.get(+b.dataset.oid);if(f)toggleSel(f)});
+    }
+    renderForm(mode==='single'?a:null);
+    $('errBox').style.display='none';
+    $('panel').classList.add('open');setHL();renderList();
+  }
+  function opts(list,cur,allowBlank,blankLabel){
+    let h=allowBlank?'<option value="">'+esc(blankLabel||'(not set)')+'</option>':'';
+    const codes=list.map(o=>o.code);
+    if(cur!=null&&cur!==''&&!codes.includes(cur))h+='<option value="'+esc(cur)+'">(current: '+esc(cur)+')</option>';
+    return h+list.map(o=>'<option value="'+esc(o.code)+'">'+esc(o.name&&o.name!==o.code?o.code+' — '+o.name:o.code)+'</option>').join('')}
+  function control(d,a){
+    const cur=a?a[d.k]:null,fl=fieldBy[d.k],id='f_'+d.k,batch=!a;
+    if(d.kind==='text'||(d.kind==='domain'&&!(fl.domain&&fl.domain.codedValues)))return '<input type="text" id="'+id+'"'+(fl.length?' maxlength="'+fl.length+'"':'')+' autocomplete="off">';
+    if(d.kind==='int')return '<input type="text" id="'+id+'" inputmode="numeric" placeholder="blank">';
+    if(d.kind==='domain')return '<select id="'+id+'">'+opts(fl.domain.codedValues,cur,batch||cur==null,batch?'(choose)':'(not set)')+'</select>';
+    if(d.kind==='pw'){const base=(fl.domain&&fl.domain.codedValues)||[{code:'No'},{code:'Yes'}];return '<select id="'+id+'">'+opts(base.filter(o=>o.code==='Yes'||o.code==='No'),cur,batch||cur==null,batch?'(choose)':'(not set)')+'</select>'}
+    if(d.kind==='basis')return '<select id="'+id+'">'+opts(CONFIG.wellBasisValues.map(v=>({code:v})),cur,true,'(choose basis)')+'</select>';
+  }
+  function renderForm(a){
+    const batch=!a;let h='',pend=null;
+    const block=d=>'<div class="f" data-k="'+d.k+'"><label><input type="checkbox" class="tick" data-k="'+d.k+'"><span title="'+esc(d.k)+'">'+esc(d.label)+'</span></label>'+control(d,a)+'<div class="err"></div></div>';
+    for(const d of FORM){if(batch&&d.batch===false)continue;
+      if(d.pair===1){pend=d;continue}
+      if(d.pair===2&&pend){h+='<div class="two">'+block(pend)+block(d)+'</div>';pend=null;continue}
+      h+=block(d)}
+    $('form').innerHTML=h;
+    for(const d of FORM){const el=$('f_'+d.k);if(!el)continue;
+      if(a){const v=a[d.k];el.value=v==null?'':String(v)}else{el.value='';el.disabled=true}}
+    $('form').querySelectorAll('.tick').forEach(t=>t.onchange=()=>{const el=$('f_'+t.dataset.k);el.disabled=!t.checked;
+      if(t.dataset.k==='Private_Well'&&t.checked){const b=document.querySelector('.tick[data-k="Private_Well_Basis"]');if(b&&!b.checked&&$('f_Private_Well').value==='Yes'){b.checked=true;$('f_Private_Well_Basis').disabled=false}}
+      basisVis()});
+    $('f_Private_Well').addEventListener('change',()=>{if(mode==='batch'&&$('f_Private_Well').value==='Yes'){const b=document.querySelector('.tick[data-k="Private_Well_Basis"]');b.checked=true;$('f_Private_Well_Basis').disabled=false}basisVis()});
+    basisVis()}
+  function basisVis(){
+    const box=document.querySelector('.f[data-k="Private_Well_Basis"]');if(!box)return;
+    if(mode==='batch'){box.classList.remove('hide');return}
+    box.classList.toggle('hide',$('f_Private_Well').value!=='Yes')}
+  function proposed(){
+    const p={};
+    for(const d of FORM){const el=$('f_'+d.k);if(!el)continue;
+      if(mode==='batch'){const t=document.querySelector('.tick[data-k="'+d.k+'"]');if(!t||!t.checked)continue}
+      else if(d.k==='Private_Well_Basis'&&$('f_Private_Well').value!=='Yes')continue; // hidden: unchanged, or cleared by the No rule
+      p[d.k]=el.value}
+    return p}
+  function plans(){const p=proposed();return[...sel.values()].map(f=>({f,r:LUARules.plan(CONFIG,f.attributes,p,ctx)}))}
+  function dirty(){return !!mode&&sel.size>0&&plans().some(x=>Object.keys(x.r.changes).length>0)}
+
+  // ── save ───────────────────────────────────────────────
+  const show=v=>v==null||v===''?'(blank)':String(v);
+  function summary(work,warns){
+    return new Promise(res=>{
+      let h='<div class="hint" style="margin:0 0 6px">'+work.length+' parcel'+(work.length>1?'s':'')+' will be updated. Lot Updated is set to today.</div>';
+      h+='<table><tr><th>Parcel</th><th>Field</th><th>Before</th><th>After</th></tr>';
+      for(const{f,r}of work){const a=f.attributes;
+        Object.keys(r.changes).forEach((k,i)=>{h+='<tr'+(k==='ADDRESS'?' class="addr"':'')+'><td>'+(i?'':esc(addrOf(a))+'<div class="pid">#'+a[oidF]+' · PropID '+esc(a.PropID==null?'—':a.PropID)+'</div>')+'</td><td>'+esc(LABELS[k]||k)+'</td><td>'+esc(show(a[k]))+'</td><td>'+esc(show(r.changes[k]))+'</td></tr>'})}
+      h+='</table>';
+      if(work.some(x=>'ADDRESS' in x.r.changes))h+='<div class="hint">Address changes (highlighted) affect address search in other City apps.</div>';
+      if(warns.length)h+='<div class="wn"><b>Please check:</b><br>'+warns.map(esc).join('<br>')+'<label><input type="checkbox" id="ackW"> I have checked these warnings</label></div>';
+      $('sumBody').innerHTML=h;$('sum').style.display='flex';
+      const ok=$('sumOk');ok.disabled=!!warns.length;if(warns.length)$('ackW').onchange=e=>ok.disabled=!e.target.checked;
+      const done=v=>{$('sum').style.display='none';ok.onclick=$('sumCancel').onclick=null;res(v)};
+      ok.onclick=()=>done(true);$('sumCancel').onclick=()=>done(false)})}
+  function showErrors(list){
+    document.querySelectorAll('#form .f.bad').forEach(x=>x.classList.remove('bad'));
+    if(!list.length){$('errBox').style.display='none';return}
+    const multi=sel.size>1;
+    $('errBox').innerHTML=list.map(e=>esc((multi?addrOf(e.a)+' #'+e.a[oidF]+': ':'')+e.msg)).join('<br>');$('errBox').style.display='block';
+    list.forEach(e=>{const box=document.querySelector('#form .f[data-k="'+e.k+'"]');if(box){box.classList.add('bad');box.querySelector('.err').textContent=e.msg}})}
+  function downloadCsv(rows){
+    const d=new Date(),p=x=>String(x).padStart(2,'0');
+    const name='LUAEditor_save_'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds())+'.csv';
+    const url=URL.createObjectURL(new Blob([LUARules.csv(rows)],{type:'text/csv'}));
+    const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);return name}
+
+  $('saveBtn').onclick=async()=>{
+    if(busy||!sel.size)return;
+    const ps=plans();
+    const errs=[];ps.forEach(({f,r})=>r.errors.forEach(e=>errs.push({...e,a:f.attributes})));
+    const work=ps.filter(x=>Object.keys(x.r.changes).length);
+    showErrors(errs);
+    if(!work.length){toast(errs.length?'Fix the problems shown before saving.':'No changes to save.',!errs.length);return}
+    if(errs.length){toast('Nothing saved. Fix the problems shown'+(sel.size>1?' (the whole batch is refused)':'')+'.',false);return}
+    const warns=[];work.forEach(({f,r})=>r.warnings.forEach(w=>warns.push((sel.size>1?addrOf(f.attributes)+' #'+f.attributes[oidF]+': ':'')+w.msg)));
+    if(!await summary(work,warns))return;
+    busy=true;$('saveBtn').disabled=true;
+    try{
+      const ids=work.map(x=>x.f.attributes[oidF]);
+      // stale check: re-read right before saving
+      const fresh=new Map((await byIds(ids,false)).map(f=>[f.attributes[oidF],f.attributes]));
+      const stale=work.filter(x=>{const fr=fresh.get(x.f.attributes[oidF]);return !fr||LUARules.isStale(CONFIG,x.f.attributes,fr,editDateF)});
+      if(stale.length){
+        toast('Not saved: '+stale.map(x=>addrOf(x.f.attributes)+' #'+x.f.attributes[oidF]).join(', ')+' changed since you opened '+(stale.length>1?'them':'it')+'. Reloaded; please re-check and save again.',false);
+        await refreshSel();return}
+      const lotVal=LUARules.lotValue(lotField);const now=new Date();
+      const feats=work.map(x=>new Graphic({attributes:LUARules.payload(CONFIG,oidF,x.f.attributes[oidF],x.r.changes,names,lotField&&lotField.name,lotVal)}));
+      const r=await layer.applyEdits({updateFeatures:feats});
+      const res=r.updateFeatureResults||[];
+      const back=new Map((await byIds(ids,false).catch(()=>[])).map(f=>[f.attributes[oidF],f.attributes]));
+      const rows=[['OBJECTID','PropID','ADDRESS','field','before','after','result','editor','saved_at']];
+      let okN=0;const failed=[],mismatch=[];
+      work.forEach((x,i)=>{const a=x.f.attributes,oid=a[oidF],e=res[i]&&res[i].error,b=back.get(oid);
+        let result=e?'FAILED: '+(e.message||'edit refused'):'saved';
+        if(!e){okN++;if(!b||Object.keys(x.r.changes).some(k=>LUARules.differs(CONFIG,k,x.r.changes[k],b[k]))){result='saved; read-back differs';mismatch.push(oid)}}
+        else failed.push(oid);
+        const ch={...x.r.changes};if(lotField&&lotVal!==undefined)ch[lotField.name]=lotVal;
+        Object.keys(ch).forEach(k=>rows.push([oid,a.PropID,a.ADDRESS,k,a[k],ch[k],result,user,now.toISOString()]))});
+      const file=downloadCsv(rows);
+      await refreshSel();
+      let m=okN+' of '+work.length+' parcel'+(work.length>1?'s':'')+' saved. Before/after record: '+file;
+      if(failed.length)m+='\nFailed: #'+failed.join(', #');
+      if(mismatch.length)m+='\nRead-back differs: #'+mismatch.join(', #');
+      toast(m,!failed.length&&!mismatch.length);
+    }catch(e){toast('Save failed, nothing confirmed: '+(e.details&&e.details.messages?e.details.messages.join('; '):e.message||e),false)}
+    finally{busy=false;$('saveBtn').disabled=false}
+  };
+  async function refreshSel(){
+    const fs=await byIds([...sel.keys()]);sel=new Map(fs.map(f=>[f.attributes[oidF],f]));
+    results=results.map(f=>sel.get(f.attributes[oidF])||f);
+    if(sel.size)openPanel();else closePanel()}
+  window.addEventListener('beforeunload',e=>{if(dirty()){e.preventDefault();e.returnValue=''}});
+});
+</script>
+</body>
+</html>

@@ -66,9 +66,9 @@ MetesBounds/
 └── README.md
 ```
 
-Target one of:
+Target:
 
-- **Intranet (recommended, matches Drainage / Floodplain / Traffic):** `gis.local/MetesBounds/`
+- **Intranet:** NOT possible for this app. It signs in with ArcGIS OAuth, and ArcGIS Online needs an https redirect URI; gis.local is http only (rule R1, Ernie 2026-11-02, see `gis-apps/README.md`). gis.local may carry a link/redirect to the GitHub Pages URL (ChatGPT installs it).
 - **GitHub Pages:** `cofor-gis/gis-apps` repo, folder `MetesBounds/` -> `https://cofor-gis.github.io/gis-apps/MetesBounds/`
 
 **OAuth redirect URI:** whichever URL you deploy to must be registered as a redirect URI on OAuth app `DhZk7VoirUPP4Sa2` in AGOL, or sign-in will fail.

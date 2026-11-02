@@ -65,7 +65,7 @@ Added as a dedicated profile, replacing the prior practice of folding ENG into A
 
 ### Deployment
 - Folder-per-app `MetesBounds/` with `index.html` + `logo.svg` + `README.md`.
-- Recommended: `gis.local/MetesBounds/` (intranet) or `cofor-gis/gis-apps/MetesBounds/` on GitHub Pages.
+- Deploy on GitHub Pages: `cofor-gis/gis-apps/MetesBounds/` -> `https://cofor-gis.github.io/gis-apps/MetesBounds/`. (Updated 2026-11-02, rule R1: OAuth apps need an https redirect URI, so gis.local can only carry a link/redirect to it.)
 - Register the deployment URL as an OAuth redirect URI on `DhZk7VoirUPP4Sa2`.
 
 ### App open items
