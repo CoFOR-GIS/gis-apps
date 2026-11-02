@@ -21,6 +21,15 @@ const html=fs.readFileSync(path.join(D,'..','index.html'),'utf8');
  t('panel open',await p.$eval('#panel',e=>e.classList.contains('open')));
  t('title',(await p.textContent('#pTitle'))==='123 MAIN ST');
  t('ro shows subdivision',(await p.textContent('#ro')).includes('Oak Hills'));
+ t('acres 2 decimals',(await p.textContent('#ro')).includes('110.81')&&!(await p.textContent('#ro')).includes('110.8136'));
+ t('zoom to padded extent',(await p.evaluate(()=>window.GOTO&&window.GOTO.expanded))===1.5);
+ // Cowork fix 3: clearing water warns, Save locked until acknowledged, then nothing saved on Back
+ await p.fill('#f_Num__of_Connections_Water','');await p.click('#saveBtn');await p.waitForTimeout(200);
+ t('clear water warning shown',(await p.textContent('#sumBody')).includes('Water connections will be cleared'));
+ t('save locked until ack',await p.$eval('#sumOk',b=>b.disabled));
+ await p.check('#ackW');t('save enabled after ack',!(await p.$eval('#sumOk',b=>b.disabled)));
+ await p.click('#sumCancel');await p.click('#cancelBtn');await p.waitForTimeout(100);
+ t('no edit sent',(await p.evaluate(()=>EDITS.length))===0);
  t('basis hidden',await p.$eval('.f[data-k="Private_Well_Basis"]',e=>e.classList.contains('hide')));
  // FORU + water + Yes -> blocked
  await p.selectOption('#f_Private_Well','Yes');

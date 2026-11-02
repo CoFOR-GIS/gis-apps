@@ -1,5 +1,5 @@
 // Fake ArcGIS SDK used only by ui.test.js. FAKE parcels; no real data.
-window.STORE={1:{OBJECTID:1,ADDRESS:'123 MAIN ST',textImproved:'Improved',LUA:'FORU',Num__of_Connections_Water:1,Num__of_Connections_Sewer:0,MasterWater:null,MasterWastewater:null,Private_Well:null,Private_Well_Basis:null,PropID:'1001',Subdivision:'Oak Hills',Unit:'2',Lot:'7',COUNTY:'Kendall',Pressure_Zone:'PZ1',Lot_Acreage:1.2,LotUpdated:null,EditDate:1000,Editor:'awade'},
+window.STORE={1:{OBJECTID:1,ADDRESS:'123 MAIN ST',textImproved:'Improved',LUA:'FORU',Num__of_Connections_Water:1,Num__of_Connections_Sewer:0,MasterWater:null,MasterWastewater:null,Private_Well:null,Private_Well_Basis:null,PropID:'1001',Subdivision:'Oak Hills',Unit:'2',Lot:'7',COUNTY:'Kendall',Pressure_Zone:'PZ1',Lot_Acreage:110.81362584844793,LotUpdated:null,EditDate:1000,Editor:'awade'},
  2:{OBJECTID:2,ADDRESS:'125 MAIN ST',textImproved:'Vacant',LUA:'Private',Num__of_Connections_Water:0,Num__of_Connections_Sewer:0,MasterWater:2,MasterWastewater:null,Private_Well:'No',Private_Well_Basis:null,PropID:'1002',Subdivision:'Oak Hills',Unit:'2',Lot:'8',COUNTY:'Kendall',Pressure_Zone:'PZ1',Lot_Acreage:2,LotUpdated:null,EditDate:1000,Editor:'awade',ImprovedValue:'SECRET'}};
 window.EDITS=[];
 const F=(name,type,extra)=>Object.assign({name,type,alias:name},extra||{});
@@ -13,10 +13,10 @@ class FL{constructor(o){Object.assign(this,o)}
  async load(){this.objectIdField='OBJECTID';this.fields=FIELDS;this.editFieldsInfo={editDateField:'EditDate',editorField:'Editor'};this.capabilities={operations:{supportsUpdate:true,supportsAdd:false,supportsDelete:false},editing:{supportsGeometryUpdate:false}}}
  async queryFeatures(q){window.LASTQ=q;let ids=q.objectIds||Object.keys(STORE).map(Number);
   if(q.where&&!q.objectIds){const m=q.where.match(/OBJECTID = (\d+)/);if(m)ids=[+m[1]];else{const s=(q.where.match(/LIKE '%(.*?)%'/)||[])[1]||'';ids=ids.filter(i=>STORE[i].ADDRESS.includes(s))}}
-  return{features:ids.filter(i=>STORE[i]).map(i=>({attributes:pick({...STORE[i]},q.outFields),geometry:{type:'point'}}))}}
+  return{features:ids.filter(i=>STORE[i]).map(i=>({attributes:pick({...STORE[i]},q.outFields),geometry:{type:'polygon',extent:{width:500,clone(){return{expand(f){return{expanded:f}}}}}}}))}}
  async applyEdits(e){const r=e.updateFeatures.map(g=>{EDITS.push(g.attributes);const a=g.attributes;Object.assign(STORE[a.OBJECTID],a,{EditDate:Date.now(),Editor:'emartz'});return{objectId:a.OBJECTID}});return{updateFeatureResults:r}}}
 class MV{constructor(o){this.spatialReference={wkid:3857};this.zoom=14;this.ui={add(){}};this.container=document.getElementById('map')}on(e,f){window.__click=f}
- async whenLayerView(){return{highlight(ids){window.HL=ids;return{remove(){}}}}}goTo(){return Promise.resolve()}async hitTest(ev){return{results:[{graphic:{layer:window.__layer,attributes:{OBJECTID:ev.oid}}}]}}}
+ async whenLayerView(){return{highlight(ids){window.HL=ids;return{remove(){}}}}}goTo(t){window.GOTO=t;return Promise.resolve()}async hitTest(ev){return{results:[{graphic:{layer:window.__layer,attributes:{OBJECTID:ev.oid}}}]}}}
 const mods={'esri/identity/OAuthInfo':class{constructor(o){Object.assign(this,o)}},
  'esri/identity/IdentityManager':{registerOAuthInfos(){},checkSignInStatus:()=>Promise.resolve(),getCredential(){},destroyCredentials(){}},
  'esri/portal/Portal':class{async load(){this.user={username:'emartz',fullName:'Ernie Martz'}}},

@@ -214,6 +214,8 @@ const LUARules=(()=>{
       if(ch[k]===null)E(k,L(k)+': choose a value');
       else{const d=ctx.domains&&ctx.domains[k];if(d&&d.length&&!d.includes(ch[k]))E(k,L(k)+': "'+ch[k]+'" is not in the list')}}
     if('Private_Well' in ch&&ch.Private_Well!=='Yes'&&ch.Private_Well!=='No')E('Private_Well',L('Private_Well')+': choose Yes or No');
+    // Cowork fix 3: clearing a count is allowed but must be acknowledged (counts drive the LUA viewer and dashboard)
+    for(const k of cfg.intFields)if(k in ch&&ch[k]===null&&I(before[k])!==null)W(k,L(k)+' will be cleared (blank). Connection and master-plan counts drive the LUA viewer and dashboard.');
     if('ADDRESS' in ch){if(ch.ADDRESS===null)W('ADDRESS','Address will be cleared.');
       else if(ctx.addrMax&&ch.ADDRESS.length>ctx.addrMax)E('ADDRESS','Address: at most '+ctx.addrMax+' characters')}
     const pw=after.Private_Well,basis=after.Private_Well_Basis,w=after.Num__of_Connections_Water,s=after.Num__of_Connections_Sewer;
@@ -368,7 +370,9 @@ if(/^PENDING/.test(CONFIG.editItemId)){
   // ── selection ──────────────────────────────────────────
   function guard(){return !dirty()||confirm('Discard unsaved changes?')}
   function selectOnly(f,zoom){if(!guard()){renderList();return}sel=new Map([[f.attributes[oidF],f]]);openPanel();
-    if(zoom&&f.geometry)view.goTo({target:f.geometry,zoom:Math.max(view.zoom,17)}).catch(()=>{})}
+    if(zoom&&f.geometry)view.goTo(zoomTarget(f.geometry)).catch(()=>{})}
+  // Cowork fix 2: polygons zoom to their extent with padding (large parcels no longer fill the map); points keep a street-level zoom
+  function zoomTarget(g){return g.extent&&g.extent.width>0?g.extent.clone().expand(1.5):{target:g,zoom:Math.max(view.zoom,17)}}
   function toggleSel(f){if(!guard()){renderList();return}const k=f.attributes[oidF];if(sel.has(k))sel.delete(k);else sel.set(k,f);sel.size?openPanel():closePanel()}
   async function onMapClick(ev){
     const h=await view.hitTest(ev,{include:[layer]});const g=h.results.find(r=>r.graphic&&r.graphic.layer===layer);
@@ -382,6 +386,7 @@ if(/^PENDING/.test(CONFIG.editItemId)){
   $('cancelBtn').onclick=()=>{openPanel()};
 
   // ── panel / form ───────────────────────────────────────
+  const fmtNum=(fl,v)=>(fl&&(fl.type==='double'||fl.type==='single')&&typeof v==='number')?v.toLocaleString(undefined,{maximumFractionDigits:2}):v; // display only (Cowork fix 1: acres to 2 decimals)
   const fmtDate=v=>v==null?'—':(typeof v==='number'?new Date(v).toLocaleString():String(v));
   function openPanel(){
     mode=sel.size>1?'batch':'single';const fs=[...sel.values()];const a=fs[0].attributes;
@@ -389,7 +394,7 @@ if(/^PENDING/.test(CONFIG.editItemId)){
     if(mode==='single'){
       $('pTitle').textContent=addrOf(a);$('pMeta').textContent=subOf(a);$('selSec').style.display='none';$('roSec').style.display='';
       const ro=CONFIG.readOnlyFields.filter(k=>names.has(k)&&k!==editDateF&&k!==editorF);
-      $('ro').innerHTML=ro.map(k=>'<div><span>'+esc((fieldBy[k].alias||k))+':</span> '+esc(a[k]==null?'—':(fieldBy[k].type==='date'?fmtDate(a[k]):a[k]))+'</div>').join('')+
+      $('ro').innerHTML=ro.map(k=>'<div><span>'+esc((fieldBy[k].alias||k))+':</span> '+esc(a[k]==null?'—':(fieldBy[k].type==='date'?fmtDate(a[k]):fmtNum(fieldBy[k],a[k])))+'</div>').join('')+
         (lotField?'<div><span>'+esc(lotField.alias||lotField.name)+':</span> '+esc(lotField.type==='date'?(a[lotField.name]==null?'—':new Date(a[lotField.name]).toLocaleDateString(undefined,{timeZone:'UTC'})):(a[lotField.name]==null?'—':a[lotField.name]))+'</div>':'')+
         '<div class="hint">Last edited '+esc(fmtDate(editDateF?a[editDateF]:null))+(editorF&&a[editorF]?' by '+esc(a[editorF]):'')+'</div>';
     }else{

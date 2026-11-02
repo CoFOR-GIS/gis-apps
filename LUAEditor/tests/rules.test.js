@@ -14,6 +14,11 @@ t('null kept',ks(P(base,{MasterWater:'',MasterWastewater:' ',Private_Well:''}))=
 // 2 blank != 0
 t('blank not 0',P({...base,MasterWater:0},{MasterWater:''}).changes.MasterWater===null);
 t('0 not blank',P(base,{MasterWater:'0'}).changes.MasterWater===0);
+// Cowork fix 3: clearing a count warns (allowed), blank->blank silent
+t('clear water warns',(r=>r.changes.Num__of_Connections_Water===null&&r.errors.length===0&&r.warnings.some(w=>w.k==='Num__of_Connections_Water'))(P(base,{Num__of_Connections_Water:''})));
+t('clear master warns',P({...base,MasterWater:3},{MasterWater:' '}).warnings.length===1);
+t('blank to blank no warning',P(base,{MasterWater:''}).warnings.length===0);
+t('0 to blank warns',P({...base,Num__of_Connections_Sewer:0},{Num__of_Connections_Sewer:''}).warnings.length===1);
 // 3 int validation
 t('neg int',P(base,{MasterWater:'-1'}).errors.length===1);
 t('decimal',P(base,{MasterWater:'1.5'}).errors.length===1);

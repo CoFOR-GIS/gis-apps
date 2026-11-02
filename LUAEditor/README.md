@@ -24,8 +24,8 @@ LUAEditor/
   logo.svg     City seal (copy of RadarSignEditor/logo.svg); also the favicon
   README.md    this file
   tests/       offline tests (fake data only; not used by the app)
-    rules.test.js   38 cases for the rules block in index.html (Node 18+, no packages)
-    ui.test.js      23 browser checks against mock-sdk.js (Playwright + Chromium)
+    rules.test.js   42 cases for the rules block in index.html (Node 18+, no packages)
+    ui.test.js      29 browser checks against mock-sdk.js (Playwright + Chromium)
     mock-sdk.js     fake ArcGIS SDK and fake parcels for ui.test.js
     smoke.test.js   start screen at 1280 px and 390 px (Playwright)
 ```
@@ -83,6 +83,7 @@ LUAEditor/
 | FORU + private well Yes + water or sewer connections > 0 (LUA viewer rule; Ernie 2026-11-02) | blocks save |
 | Private well Yes on a non-FORU parcel | warning you must acknowledge |
 | Address changes are highlighted, because other apps search by address | shown in review |
+| Clearing a connection or master-plan count (number → blank) is allowed but warned, because the counts drive the LUA viewer and dashboard | warning you must acknowledge |
 
 **Safety on save.**
 - Right before saving, the app re-reads the parcels. If anyone changed one since you opened it, nothing is saved and the parcel reloads.
@@ -104,7 +105,7 @@ node LUAEditor/tests/ui.test.js
 ```bash
 node LUAEditor/tests/smoke.test.js
 ```
-- Expected: `38 passed, 0 failed`; `23 passed, 0 failed; page errors: []`; the smoke test prints the start-screen text and `hscroll: false` at both widths.
+- Expected: `42 passed, 0 failed`; `29 passed, 0 failed; page errors: []`; the smoke test prints the start-screen text and `hscroll: false` at both widths.
 - The rules test reads the block between `RULES-START` and `RULES-END` in index.html; keep those markers.
 
 **Live (with Ernie's account and go-ahead):**
@@ -122,3 +123,4 @@ node LUAEditor/tests/smoke.test.js
 - 2026-11-02 v1.0.0-pre: first build (Claude, WO-0008 step 2). Editing view item ID is pending.
 - 2026-11-02 v1.0.0-rc1: CONFIG.editItemId set to the WO-0008 step 1 editing view 225859c291a94a23b8b9b0a0ddd1c1aa (Ernie). Shows a clear message if the SDK cannot load. Tagged for a test install at gis.local.
 - 2026-11-02 v1.0.0-rc2: offline tests committed in tests/ (rule R3). Hosting moved to GitHub Pages (https://cofor-gis.github.io/gis-apps/LUAEditor/) under rule R1 (Ernie: ArcGIS Online needs an https redirect URI; gis.local is http only). gis.local keeps only a link/redirect, installed by ChatGPT. No logic change.
+- 2026-11-02 v1.0.1: fixes from Cowork's live test (https://github.com/CoFOR-GIS/gis-apps/pull/1#issuecomment-6587541700): (1) acreage and other decimal read-only values shown to 2 decimals; (2) selecting a parcel zooms to its extent with padding (expand 1.5) instead of a fixed close zoom; (3) clearing a connection or master-plan count warns and needs acknowledgement. Tests now 42 rules / 29 browser checks.
