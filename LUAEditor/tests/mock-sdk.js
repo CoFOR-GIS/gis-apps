@@ -15,11 +15,15 @@ class FL{constructor(o){Object.assign(this,o)}
   if(q.where&&!q.objectIds){const m=q.where.match(/OBJECTID = (\d+)/);if(m)ids=[+m[1]];else{const s=(q.where.match(/LIKE '%(.*?)%'/)||[])[1]||'';ids=ids.filter(i=>STORE[i].ADDRESS.includes(s))}}
   return{features:ids.filter(i=>STORE[i]).map(i=>({attributes:pick({...STORE[i]},q.outFields),geometry:{type:'polygon',extent:{width:500,clone(){return{expand(f){return{expanded:f}}}}}}}))}}
  async applyEdits(e){const r=e.updateFeatures.map(g=>{EDITS.push(g.attributes);const a=g.attributes;Object.assign(STORE[a.OBJECTID],a,{EditDate:Date.now(),Editor:'emartz'});return{objectId:a.OBJECTID}});return{updateFeatureResults:r}}}
-class MV{constructor(o){this.spatialReference={wkid:3857};this.zoom=14;this.ui={add(){}};this.container=document.getElementById('map')}on(e,f){window.__click=f}
- async whenLayerView(){return{highlight(ids){window.HL=ids;return{remove(){}}}}}goTo(t){window.GOTO=t;return Promise.resolve()}async hitTest(ev){return{results:[{graphic:{layer:window.__layer,attributes:{OBJECTID:ev.oid}}}]}}}
+// Like the real MapView, the mock learns its size only via ResizeObserver (asynchronously), so a goTo issued right after
+// the edit panel opens sees the OLD width - that lag is what caused the v1.0.1 single-result-search zoom bug.
+class MV{constructor(o){this.spatialReference={wkid:3857};this.zoom=14;this.ui={add(){}};this.container=document.getElementById('map');this._w=this.container.clientWidth;this._h=this.container.clientHeight;new ResizeObserver(()=>setTimeout(()=>{this._w=this.container.clientWidth;this._h=this.container.clientHeight},30)).observe(this.container)}on(e,f){window.__click=f}
+ async whenLayerView(){return{highlight(ids){window.HL=ids;return{remove(){}}}}}get width(){return this._w}get height(){return this._h}
+ goTo(t){window.GOTO=t;window.GOTO_AT={mapWidth:this._w,panelOpen:document.getElementById('panel').classList.contains('open')};return Promise.resolve()}async hitTest(ev){return{results:[{graphic:{layer:window.__layer,attributes:{OBJECTID:ev.oid}}}]}}}
 const mods={'esri/identity/OAuthInfo':class{constructor(o){Object.assign(this,o)}},
  'esri/identity/IdentityManager':{registerOAuthInfos(){},checkSignInStatus:()=>Promise.resolve(),getCredential(){},destroyCredentials(){}},
  'esri/portal/Portal':class{async load(){this.user={username:'emartz',fullName:'Ernie Martz'}}},
  'esri/Map':class{},'esri/views/MapView':MV,'esri/layers/FeatureLayer':class extends FL{constructor(o){super(o);window.__layer=this}},
- 'esri/Graphic':class{constructor(o){Object.assign(this,o)}},'esri/widgets/BasemapToggle':class{}};
+ 'esri/Graphic':class{constructor(o){Object.assign(this,o)}},
+ 'esri/core/reactiveUtils':{whenOnce(fn){return new Promise(res=>{const t=()=>fn()?res():setTimeout(t,20);t()})}},'esri/widgets/BasemapToggle':class{}};
 window.require=(names,cb)=>setTimeout(()=>cb(...names.map(n=>mods[n])),0);

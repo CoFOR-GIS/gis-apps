@@ -16,6 +16,18 @@ const html=fs.readFileSync(path.join(D,'..','index.html'),'utf8');
  t('who',(await p.textContent('#who'))==='Ernie Martz');
  t('no warnbar',await p.$eval('#warnbar',w=>w.style.display!=='block'));
  t('outFields exclude ImprovedValue',await p.evaluate(()=>!__layer.outFields.includes('ImprovedValue')&&__layer.outFields.includes('Private_Well')));
+ // v1.0.2: single-result search with the panel CLOSED must zoom after the map has narrowed
+ const wideW=await p.$eval('#map',e=>e.clientWidth);
+ await p.fill('#q','125');await p.click('#qBtn');await p.waitForTimeout(400);
+ const at1=await p.evaluate(()=>window.GOTO_AT),narrowW=await p.$eval('#map',e=>e.clientWidth);
+ t('single-result zoom after panel opened',!!at1&&at1.panelOpen&&narrowW<wideW&&at1.mapWidth===narrowW);
+ await p.click('#pClose');await p.waitForTimeout(100);
+ await p.evaluate(()=>{window.GOTO_AT=null});
+ await p.fill('#q','MAIN');await p.click('#qBtn');await p.waitForTimeout(200);
+ await p.click('#list button[data-oid="2"]');await p.waitForTimeout(400);
+ const at2=await p.evaluate(()=>window.GOTO_AT);
+ t('list-click zoom after panel opened',!!at2&&at2.panelOpen&&at2.mapWidth===(await p.$eval('#map',e=>e.clientWidth)));
+ await p.click('#pClose');await p.waitForTimeout(100);
  // search single -> opens
  await p.fill('#q','123');await p.click('#qBtn');await p.waitForTimeout(200);
  t('panel open',await p.$eval('#panel',e=>e.classList.contains('open')));
