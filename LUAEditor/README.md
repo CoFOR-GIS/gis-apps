@@ -6,7 +6,7 @@
 | Users | AGOL group "LUA Editors" (Public Works, Amanda Wade) |
 | Served at | http://gis.local/LUAEditor/ (City network only) |
 | Replaces | Experience Builder app 1d33d5773a5b439ba742d6e6c4dae2c0 (kept until Amanda accepts) |
-| Status | built; awaiting editing view item ID (WO-0008 step 1) and live testing |
+| Status | v1.0.0-rc1: release candidate for live test on gis.local (Ernie); not accepted yet |
 
 > **Internal only.** This app shows and edits `Private_Well` / `Private_Well_Basis`, which are internal knowledge (D-018). Do not copy this app, its field list, screenshots or its CSV files into `CoFOR-GIS/gis-maps` or any public page.
 
@@ -89,3 +89,4 @@ LUAEditor/
 
 ## 7. Change log
 - 2026-11-02 v1.0.0-pre: first build (Claude, WO-0008 step 2). Editing view item ID is pending.
+- 2026-11-02 v1.0.0-rc1: CONFIG.editItemId set to the WO-0008 step 1 editing view 225859c291a94a23b8b9b0a0ddd1c1aa (Ernie). Shows a clear message if the SDK cannot load. Tagged for a test install at gis.local.

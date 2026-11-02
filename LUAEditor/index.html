@@ -166,7 +166,7 @@ const CONFIG = {
   portalUrl: 'https://fairoaksranch.maps.arcgis.com',
   appId: 'DhZk7VoirUPP4Sa2',
   // WO-0008 step 1: "City of Fair Oaks Ranch LUA (Internal Editing)" view. Set when Ernie supplies it.
-  editItemId: 'PENDING_WO0008_STEP1',
+  editItemId: '225859c291a94a23b8b9b0a0ddd1c1aa',
   editLayerId: 0,
   editFields: ['ADDRESS','textImproved','LUA','Num__of_Connections_Water','Num__of_Connections_Sewer',
                'MasterWater','MasterWastewater','Private_Well','Private_Well_Basis'],
@@ -273,6 +273,8 @@ const LABELS=Object.fromEntries(FORM.map(f=>[f.k,f.label]));
 
 if(/^PENDING/.test(CONFIG.editItemId)){
   gateFail('Editing view not configured yet (WO-0008 step 1). Set CONFIG.editItemId in index.html.',false);
+}else if(typeof require!=='function'){
+  gateFail('Cannot load the ArcGIS Maps SDK from js.arcgis.com. Check the network connection, then reload.',false);
 }else require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/Portal','esri/Map','esri/views/MapView',
   'esri/layers/FeatureLayer','esri/Graphic','esri/widgets/BasemapToggle'],
 (OAuthInfo,IdM,Portal,EsriMap,MapView,FeatureLayer,Graphic,BasemapToggle)=>{
