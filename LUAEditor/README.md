@@ -4,9 +4,10 @@
 |---|---|
 | Work order | WO-0008 step 2, Ref LUA-EDITOR-20261102 |
 | Users | AGOL group "LUA Editors" (Public Works, Amanda Wade) |
-| Served at | http://gis.local/LUAEditor/ (City network only) |
+| Served at | https://cofor-gis.github.io/gis-apps/LUAEditor/ (GitHub Pages, https; deployed by merging to `main`) |
+| Internal entry point | a link and/or redirect on a gis.local section home page, chosen and installed by ChatGPT (e.g. gis.local/Utilities/) |
 | Replaces | Experience Builder app 1d33d5773a5b439ba742d6e6c4dae2c0 (kept until Amanda accepts) |
-| Status | v1.0.0-rc1: release candidate for live test on gis.local (Ernie); not accepted yet |
+| Status | v1.0.0-rc2: awaiting merge to `main`, redirect URI registration and Ernie's live test; not accepted yet |
 
 > **Internal only.** This app shows and edits `Private_Well` / `Private_Well_Basis`, which are internal knowledge (D-018). Do not copy this app, its field list, screenshots or its CSV files into `CoFOR-GIS/gis-maps` or any public page.
 
@@ -22,10 +23,16 @@ LUAEditor/
   index.html   single-file app (ArcGIS Maps SDK for JavaScript 4.31); CONFIG block at the top of the script
   logo.svg     City seal (copy of RadarSignEditor/logo.svg); also the favicon
   README.md    this file
+  tests/       offline tests (fake data only; not used by the app)
+    rules.test.js   38 cases for the rules block in index.html (Node 18+, no packages)
+    ui.test.js      23 browser checks against mock-sdk.js (Playwright + Chromium)
+    mock-sdk.js     fake ArcGIS SDK and fake parcels for ui.test.js
+    smoke.test.js   start screen at 1280 px and 390 px (Playwright)
 ```
-- **Auth:** OAuth 2.0 redirect (no popup) with app ID `DhZk7VoirUPP4Sa2`. The redirect URI `http://gis.local/LUAEditor/` must be registered on that app (WO-0008 step 5, Ernie).
-- **IIS install:** ChatGPT installs from a tagged GitHub release (WO-0008 step 4).
-- **No web.config needed.** The app uses only `.html` and `.svg`.
+- **Hosting (rule R1, Ernie 2026-11-02):** apps that sign in to ArcGIS Online are served over https from GitHub Pages. ArcGIS Online will not accept `http://gis.local/...` as a redirect URI. GitHub Pages publishes the `main` branch of `CoFOR-GIS/gis-apps`, so this folder is live at https://cofor-gis.github.io/gis-apps/LUAEditor/ once merged.
+- **Auth:** OAuth 2.0 redirect (no popup) with app ID `DhZk7VoirUPP4Sa2`. The redirect URI `https://cofor-gis.github.io/gis-apps/LUAEditor/` (exact, with trailing slash) must be registered on that app.
+- **gis.local:** no app files on IIS. ChatGPT adds the internal entry point (link and/or redirect page) on the gis.local section home page it chooses.
+- **Public repo:** the source is publicly readable. It holds no data, credentials or tokens; the editing view is shared only to LUA Editors, so nobody else can read or edit through it.
 
 ## 3. Data sources
 - **Edits:** "City of Fair Oaks Ranch LUA (Internal Editing)" view.
@@ -42,6 +49,19 @@ LUAEditor/
 | Num__Remaining_Water_Connection, Num__Remaining_Sewer_Connection, ImprovedValue | excluded: not loaded, never sent (Ernie 2026-11-02; add back if something relied on them) |
 
 ## 4. Procedure
+### Deploy or update (Ernie; no command line or script needed)
+1. Changes are made on a branch and offered as a pull request into `main` of `CoFOR-GIS/gis-apps`.
+2. Open the pull request on GitHub, review the **Files changed** tab, click **Merge pull request**, then **Confirm merge**. Merging is what makes the change live.
+3. Open the repo's **Actions** tab. Wait for the newest **pages build and deployment** run to show a green tick (usually 1-3 minutes).
+4. Open https://cofor-gis.github.io/gis-apps/LUAEditor/ and press Ctrl+F5. The start screen shows the City seal and "Signing in to ArcGIS Online".
+5. First deployment only: register the redirect URI.
+   1. Go to https://fairoaksranch.maps.arcgis.com and sign in. Open **Content**.
+   2. Open the OAuth application item whose App ID is `DhZk7VoirUPP4Sa2`. It already lists `https://cofor-gis.github.io/gis-apps/RadarSignEditor/` as a redirect URI.
+   3. Go to **Settings**. Under **Application settings / Registered info**, click **Update**. In newer ArcGIS Online versions this is **Credentials** then **Redirect URLs**.
+   4. Add exactly `https://cofor-gis.github.io/gis-apps/LUAEditor/` (https, trailing slash). Click **Add**, then **Update** / **Save**.
+   5. Expected: the URI is listed next to the RadarSignEditor one. Reload the app; the ArcGIS sign-in page opens without an "invalid redirect_uri" error.
+
+### Use
 **Find a parcel.** Type an address, a PropID or `#OID`, then press **Find**. You can also click the map.
 - Ctrl/Shift-click on the map, or tick the boxes in the list, to select several parcels.
 
@@ -72,9 +92,20 @@ LUAEditor/
   - To undo a save, enter the `before` values again in the app.
 
 ## 5. Verification
-**Offline (Claude, every change):**
-- The rules block (`RULES-START` to `RULES-END` in index.html) has a 38-case Node test.
-- A mocked-SDK browser test covers sign-in, search, block and save, stale refusal, batch, and the CSV.
+**Offline (whoever changes the code, every change; developer machine, not the City workstation):**
+- Prerequisites: Node 18+ and, for the browser tests, `npm i playwright` then `npx playwright install chromium`.
+- From the repo root run each of these; all must pass:
+```bash
+node LUAEditor/tests/rules.test.js
+```
+```bash
+node LUAEditor/tests/ui.test.js
+```
+```bash
+node LUAEditor/tests/smoke.test.js
+```
+- Expected: `38 passed, 0 failed`; `23 passed, 0 failed; page errors: []`; the smoke test prints the start-screen text and `hscroll: false` at both widths.
+- The rules test reads the block between `RULES-START` and `RULES-END` in index.html; keep those markers.
 
 **Live (with Ernie's account and go-ahead):**
 1. Startup checks pass. The view is update-only with no geometry edits; otherwise a yellow bar says so.
@@ -84,9 +115,10 @@ LUAEditor/
 5. An account outside LUA Editors cannot open the view.
 
 ## 6. Rollback
-- **App:** remove `FORWeb\LUAEditor` (ChatGPT's install script) and keep using the Experience Builder app.
+- **App:** on GitHub, open the merged pull request and click **Revert**, then merge the revert pull request. Pages republishes the previous version in 1-3 minutes. ChatGPT removes or hides the gis.local link. The Experience Builder app stays available until Amanda accepts this one.
 - **Data:** this does not undo AGOL edits. Use the per-save CSV `before` values and the editor tracking fields (EditDate, Editor) to find and re-enter old values.
 
 ## 7. Change log
 - 2026-11-02 v1.0.0-pre: first build (Claude, WO-0008 step 2). Editing view item ID is pending.
 - 2026-11-02 v1.0.0-rc1: CONFIG.editItemId set to the WO-0008 step 1 editing view 225859c291a94a23b8b9b0a0ddd1c1aa (Ernie). Shows a clear message if the SDK cannot load. Tagged for a test install at gis.local.
+- 2026-11-02 v1.0.0-rc2: offline tests committed in tests/ (rule R3). Hosting moved to GitHub Pages (https://cofor-gis.github.io/gis-apps/LUAEditor/) under rule R1 (Ernie: ArcGIS Online needs an https redirect URI; gis.local is http only). gis.local keeps only a link/redirect, installed by ChatGPT. No logic change.

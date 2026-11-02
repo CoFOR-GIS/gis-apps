@@ -10,7 +10,11 @@
 <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
 <!--
   CoFOR LUA Editor  (CoFOR-GIS/gis-apps/LUAEditor)  -  WO-0008, Ref LUA-EDITOR-20261102
-  INTERNAL ONLY. Served at http://gis.local/LUAEditor/ for the AGOL group "LUA Editors".
+  INTERNAL USE. Served over HTTPS from GitHub Pages: https://cofor-gis.github.io/gis-apps/LUAEditor/
+  (rule R1: ArcGIS sign-in apps need an https redirect URI; gis.local is http only.
+  gis.local only carries a link/redirect to this URL, installed by ChatGPT.)
+  Access is enforced by AGOL: the editing view is shared only to group "LUA Editors".
+  This repo is public: never put data, credentials or tokens in this file.
   Edits the internal editing view "City of Fair Oaks Ranch LUA (Internal Editing)"
   (update-only, attribute-only) over the authoritative parcel layer 6745cc19...
   Private_Well / Private_Well_Basis are internal knowledge (D-018): nothing in
