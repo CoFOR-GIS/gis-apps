@@ -1,0 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* CoFOR GIS components. Every value is a token from tokens.json (tokens.css).
+   Extracted from gis-maps/AcreageByCounty, gis-maps/CIP, gis-apps/FieldExtractor
+   and gis-apps/LUAEditor; class names are prefixed cfr- (City of Fair Oaks Ranch). */
+
+.cfr { font-family: var(--font-sans); color: var(--text-ink); -webkit-font-smoothing: antialiased; }
+.cfr *, .cfr *::before, .cfr *::after { box-sizing: border-box; }
+.cfr :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* ---------- Masthead ---------- */
+.cfr-masthead { display: flex; align-items: center; gap: var(--space-4); padding: 18px var(--space-6);
+  background: var(--bg-card); border-bottom: 2px solid var(--brand-sage); }
+.cfr-masthead__mark { height: 42px; width: auto; flex: none; display: block; }
+.cfr-masthead__titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cfr-masthead__title { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 30px;
+  line-height: 1.05; color: var(--text-heading); }
+.cfr-masthead__org { margin-left: auto; text-align: right; font-size: 12px; line-height: 1.4; color: var(--text-muted); }
+.cfr-masthead__org b { color: var(--text-heading); font-weight: 600; }
+.cfr-masthead--admin { background: var(--dept-admin); border-bottom-color: var(--brand-gold); }
+.cfr-masthead--admin .cfr-masthead__title, .cfr-masthead--admin .cfr-masthead__org b { color: var(--brand-cream); }
+.cfr-masthead--admin .cfr-masthead__org, .cfr-masthead--admin .cfr-eyebrow { color: var(--brand-tan); }
+
+/* ---------- Eyebrow ---------- */
+.cfr-eyebrow { font-size: 11px; line-height: 14px; letter-spacing: .16em; text-transform: uppercase;
+  font-weight: 700; color: var(--text-accent); }
+
+/* ---------- Button ---------- */
+.cfr-btn { display: inline-flex; align-items: center; gap: 7px; font: 600 13px/16px var(--font-sans);
+  padding: 9px 14px; border-radius: var(--radius-md); border: 1px solid transparent; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s; }
+.cfr-btn--primary { background: var(--action-primary); color: var(--action-primary-text); }
+.cfr-btn--primary:hover { background: var(--action-primary-hover); }
+.cfr-btn--secondary { background: var(--bg-card); color: var(--text-heading); border-color: var(--line);
+  box-shadow: var(--shadow-control); }
+.cfr-btn--secondary:hover { border-color: var(--brand-sage); }
+.cfr-btn--outline { background: transparent; color: var(--text-ink); border-color: var(--line-strong); }
+.cfr-btn--outline:hover { border-color: var(--text-muted); background: var(--bg-page); }
+.cfr-btn--danger { background: var(--status-error-wash); color: var(--status-error); border-color: var(--status-error); }
+.cfr-btn--small { font-size: 12px; padding: 6px 11px; }
+.cfr-btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* ---------- Segmented control ---------- */
+.cfr-segmented { display: inline-flex; gap: 3px; padding: 3px; background: var(--bg-page);
+  border: 1px solid var(--line); border-radius: 9px; }
+.cfr-segmented button { border: none; background: none; font: 600 12.5px/16px var(--font-sans);
+  color: var(--text-muted); padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; }
+.cfr-segmented button[aria-pressed="true"] { background: var(--action-primary); color: var(--action-primary-text); }
+.cfr-segmented button[disabled] { opacity: .38; cursor: default; }
+
+/* ---------- Stat band (KPI) ---------- */
+.cfr-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px;
+  background: var(--line); border-block: 1px solid var(--line); }
+.cfr-stat { background: var(--bg-page); padding: 18px var(--space-6); }
+.cfr-stat__label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700;
+  color: var(--text-muted); margin-bottom: 6px; }
+.cfr-stat__label em { font-style: normal; color: var(--text-accent); }
+.cfr-stat__value { font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1; color: var(--text-heading); }
+.cfr-stat__unit { font: 600 .45em var(--font-sans); color: var(--text-muted); margin-left: 6px; }
+
+/* ---------- Panel ---------- */
+.cfr-panel { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: var(--space-5); box-shadow: var(--shadow-sm); }
+.cfr-panel__title { margin: 0 0 4px; font: 600 19px/24px var(--font-display); color: var(--text-heading); }
+.cfr-panel__sub { margin: 0 0 14px; font-size: 12.5px; line-height: 19px; color: var(--text-muted); }
+
+/* ---------- Field ---------- */
+.cfr-field { display: flex; flex-direction: column; gap: 5px; }
+.cfr-field label { font-size: 12px; font-weight: 600; color: var(--text-ink); }
+.cfr-field input, .cfr-field select { font: 400 13.5px/20px var(--font-sans); color: var(--text-ink);
+  background: var(--bg-card); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 8px 11px; }
+.cfr-field input.is-code { font-family: var(--font-mono); font-size: 12px; }
+.cfr-field input:focus { outline: none; border-color: var(--brand-sage); box-shadow: 0 0 0 3px var(--sage-wash); }
+.cfr-field input[aria-invalid="true"] { border-color: var(--status-error); }
+.cfr-field__hint { font-size: 11.5px; line-height: 16px; color: var(--text-muted); }
+.cfr-field__hint.is-error { color: var(--status-error); }
+
+/* ---------- Toggle ---------- */
+.cfr-toggle { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.cfr-toggle input { appearance: none; margin: 0; width: 34px; height: 19px; border-radius: var(--radius-pill);
+  background: var(--bg-sunken); border: 1px solid var(--line-strong); position: relative; cursor: pointer; transition: all .2s; }
+.cfr-toggle input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px;
+  border-radius: 50%; background: var(--text-muted); transition: all .2s; }
+.cfr-toggle input:checked { background: var(--sage-wash); border-color: var(--brand-sage); }
+.cfr-toggle input:checked::after { left: 17px; background: var(--brand-sage); }
+
+/* ---------- Status bar ---------- */
+.cfr-status { display: flex; align-items: center; gap: 9px; padding: 9px 13px; border-radius: var(--radius-sm);
+  border: 1px solid; font-size: 12.5px; line-height: 18px; font-weight: 500; }
+.cfr-status__icon { font-weight: 700; flex: none; width: 16px; text-align: center; }
+.cfr-status--info { background: var(--status-info-wash); border-color: var(--status-info); color: var(--status-info); }
+.cfr-status--success { background: var(--status-success-wash); border-color: var(--status-success); color: var(--status-success); }
+.cfr-status--warning { background: var(--status-warning-wash); border-color: var(--status-warning); color: var(--status-warning); font-weight: 700; }
+.cfr-status--error { background: var(--status-error-wash); border-color: var(--status-error); color: var(--status-error); }
+
+/* ---------- Tag ---------- */
+.cfr-tag { display: inline-block; font: 600 11px/16px var(--font-mono); padding: 1px 6px; border-radius: var(--radius-xs); }
+.cfr-tag--sage { background: var(--sage-wash); color: var(--text-accent); }
+.cfr-tag--success { background: var(--status-success-wash); color: var(--status-success); }
+.cfr-tag--info { background: var(--status-info-wash); color: var(--status-info); }
+.cfr-tag--warning { background: var(--status-warning-wash); color: var(--status-warning); }
+.cfr-tag--error { background: var(--status-error-wash); color: var(--status-error); }
+.cfr-tag--muted { background: var(--bg-sunken); color: var(--text-ink); }
+
+/* ---------- Legend + share band ---------- */
+.cfr-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11.5px; color: var(--text-muted); }
+.cfr-legend__key { display: inline-block; width: 15px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.cfr-band { height: 9px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; display: flex; }
+.cfr-band > span { height: 100%; }
+
+/* ---------- Popup card (inside the ArcGIS popup) ---------- */
+.cfr-popcard { display: flex; min-width: 210px; font-family: var(--font-sans); }
+.cfr-popcard__bar { width: 5px; border-radius: 3px; background: var(--popcard-accent, var(--brand-navy)); margin-right: 13px; flex: none; }
+.cfr-popcard__value { font: 700 30px/1 var(--font-display); color: var(--text-heading); margin-top: 4px; }
+.cfr-popcard__value span { font: 600 13px var(--font-sans); color: var(--text-muted); margin-left: 6px; }
+.cfr-popcard__addr { font-size: 13px; color: var(--text-ink); margin-top: 7px; }
+
+/* ---------- Menu ---------- */
+.cfr-menu { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay); overflow: hidden; min-width: 168px; }
+.cfr-menu__group { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+  color: var(--text-muted); padding: 9px 14px 4px; }
+.cfr-menu button { display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 10px 14px; font: 400 13px var(--font-sans); color: var(--text-ink); cursor: pointer; }
+.cfr-menu button:hover { background: var(--bg-page); color: var(--text-heading); }
+
+/* ---------- Loading / empty state ---------- */
+.cfr-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: var(--space-6); text-align: center; font-size: 13.5px; color: var(--text-muted); background: var(--bg-page); }
+.cfr-state b { font-size: 15px; color: var(--text-heading); }
+.cfr-spinner { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--line);
+  border-top-color: var(--brand-sage); animation: cfr-spin .8s linear infinite; }
+@keyframes cfr-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Banner (over the map) ---------- */
+.cfr-banner { display: inline-block; background: var(--bg-inverse); color: var(--text-inverse); font-size: 12.5px;
+  line-height: 18px; padding: 9px 14px; border-radius: var(--radius-md); box-shadow: var(--shadow-overlay); max-width: 80%; }
+
+/* ---------- Footer ---------- */
+.cfr-footer { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 12px var(--space-6); background: var(--bg-card);
+  border-top: 1px solid var(--line); font-size: 11px; color: var(--text-muted); }
+.cfr-footer__dot { color: var(--brand-sage); }
+
+@media (prefers-reduced-motion: reduce) { .cfr-spinner { animation: none; } .cfr-btn, .cfr-toggle input { transition: none; } }

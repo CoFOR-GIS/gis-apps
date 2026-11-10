@@ -1,0 +1,138 @@
+/* CoFOR GIS Design System - generated from tokens.json (review copy version 1794335045-9fa6). Do not edit by hand. */
+
+:root, [data-theme="cream"] {
+  --bg-page: #faf6ee;
+  --bg-card: #ffffff;
+  --bg-sunken: #f3eee2;
+  --bg-inverse: #192737;
+  --text-ink: #1f2a36;
+  --text-heading: #192737;
+  --text-muted: #6b6f66;
+  --text-accent: #68734d;
+  --text-inverse: #ffffff;
+  --line: #e4decf;
+  --line-strong: #c9c2b3;
+  --brand-navy: #192737;
+  --brand-cream: #faf6ee;
+  --brand-sage: #8d956c;
+  --brand-sage-hover: #7c8459;
+  --brand-amber: #d49a4e;
+  --brand-gold: #c8a94e;
+  --brand-tan: #d4ca96;
+  --brand-sky: #b0c1c9;
+  --brand-olive-deep: #717c60;
+  --brand-brick: #a64850;
+  --action-primary: #192737;
+  --action-primary-hover: #22334a;
+  --action-primary-text: #ffffff;
+  --focus-ring: var(--text-accent);
+  --status-success: #3d7a4a;
+  --status-info: #4a7c90;
+  --status-warning: #9a7f2e;
+  --status-error: #a64850;
+  --status-success-wash: rgba(61,122,74,0.08);
+  --status-info-wash: rgba(74,124,144,0.08);
+  --status-warning-wash: rgba(200,169,78,0.10);
+  --status-error-wash: rgba(166,72,80,0.08);
+  --sage-wash: rgba(141,149,108,0.12);
+  --dept-admin: #1b3a2d;
+  --dept-admin-soft: #2d5e47;
+  --dept-engineering: #23282c;
+  --dept-engineering-steel: #6b757c;
+  --dept-emergency: #1c2a40;
+  --county-bexar: var(--brand-navy);
+  --county-kendall: var(--brand-sage);
+  --county-comal: #d49a4e;
+  --county-other: #b7b2a6;
+  --cip-water: var(--brand-sky);
+  --cip-wastewater: var(--brand-navy);
+  --cip-roadway: var(--brand-sage);
+  --cip-drainage: var(--brand-olive-deep);
+  --cip-building: var(--brand-brick);
+  --sev-0: #1e7b3c;
+  --sev-1: #f2b705;
+  --sev-2: #e8721c;
+  --sev-3: #ce2029;
+  --sev-4: #7a0c1f;
+  --shadow-sm: 0 1px 2px rgba(25,39,55,0.05);
+  --shadow-md: 0 4px 12px rgba(25,39,55,0.07);
+  --shadow-control: 0 1px 4px rgba(25,39,55,0.12);
+  --shadow-overlay: 0 6px 22px rgba(25,39,55,0.18);
+}
+
+[data-theme="navy"] {
+  --bg-page: #192737;
+  --bg-card: #22334a;
+  --bg-sunken: #101b2d;
+  --bg-inverse: #faf6ee;
+  --text-ink: #f2ecd8;
+  --text-heading: #faf6ee;
+  --text-muted: #cfc6a8;
+  --text-accent: #a8ae8e;
+  --text-inverse: #192737;
+  --line: rgba(242,236,216,0.14);
+  --line-strong: #2e4160;
+  --brand-amber: #e8b779;
+  --action-primary: #8d956c;
+  --action-primary-hover: #a8ae8e;
+  --action-primary-text: #192737;
+  --focus-ring: var(--text-accent);
+  --status-success: #7fb069;
+  --status-info: #4fc3d4;
+  --status-warning: #e0a83a;
+  --status-error: #ff8a93;
+  --county-bexar: var(--brand-cream);
+  --county-kendall: var(--brand-sage);
+  --cip-water: var(--brand-sky);
+  --cip-wastewater: var(--brand-cream);
+  --cip-roadway: var(--brand-sage);
+  --cip-drainage: var(--brand-olive-deep);
+  --cip-building: var(--brand-brick);
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 28px;
+  --space-7: 40px;
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --header-height: 56px;
+  --rail-width: 396px;
+  --panel-width: 380px;
+  --content-max: 1200px;
+  --breakpoint-stack: 880px;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.cfr-t-display-xl { font-family: var(--font-display); font-size: 40px; line-height: 1; font-weight: 700; }
+
+.cfr-t-display-lg { font-family: var(--font-display); font-size: 30px; line-height: 1.05; font-weight: 700; }
+
+.cfr-t-display-md { font-family: var(--font-display); font-size: 28px; line-height: 1.1; font-weight: 700; }
+
+.cfr-t-heading { font-family: var(--font-display); font-size: 19px; line-height: 24px; font-weight: 600; }
+
+.cfr-t-title-sm { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 700; }
+
+.cfr-t-body { font-family: var(--font-sans); font-size: 13.5px; line-height: 20px; font-weight: 400; }
+
+.cfr-t-small { font-family: var(--font-sans); font-size: 12.5px; line-height: 19px; font-weight: 400; }
+
+.cfr-t-label { font-family: var(--font-sans); font-size: 13px; line-height: 16px; font-weight: 600; }
+
+.cfr-t-eyebrow { font-family: var(--font-sans); font-size: 11px; line-height: 14px; font-weight: 700; letter-spacing: 0.16em; }
+
+.cfr-t-caption { font-family: var(--font-sans); font-size: 11.5px; line-height: 18px; font-weight: 400; }
+
+.cfr-t-code { font-family: var(--font-mono); font-size: 11px; line-height: 16px; font-weight: 500; }
+
+.cfr-t-data { font-family: var(--font-mono); font-size: 12px; line-height: 18px; font-weight: 400; }
