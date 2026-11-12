@@ -34,3 +34,11 @@ Auth: OAuth 2.0 redirect (no popup), app ID DhZk7VoirUPP4Sa2. The redirect URI `
 - New sign: **+ Add**, click the map, fill the record, Save.
 
 Project records (in `C:\GIS\Traffic\_project\`): `Traffic_Radar_User_and_Admin_Guide.md` (operations reference; procedures P-05 to P-08 cover this app) and `Traffic_Radar_Handoff_Guide.md` (history; Sections 23-26).
+
+## Change log
+
+- 2026-11-12 Colours and type moved to the CoFOR GIS design system, Navy theme (D-050, WO-0020 step 5, Ref DESIGN-SYSTEM-PROP-20261110):
+  - DM Sans and Playfair Display (lining figures) replace Bricolage Grotesque and Manrope. Unit and site IDs are in JetBrains Mono.
+  - The app's colour variables point at `_design/` tokens; `_design/components.css` and `_design/tokens.css` are copied into the page.
+  - The header rule and focus colour are sage; Save uses the primary-action colour.
+  - Unchanged: layout, redirect OAuth (app ID DhZk7VoirUPP4Sa2), CONFIG, SDK 4.31, layers, queries, editing behaviour, and the Fixed/Floating/Retired data colours. The script is byte-identical.

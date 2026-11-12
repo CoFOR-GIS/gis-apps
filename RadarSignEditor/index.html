@@ -1,12 +1,297 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="navy">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Radar Sign Editor | City of Fair Oaks Ranch</title>
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- CoFOR GIS design system (copied from _design/components.css and _design/tokens.css; D-050). Keep the @import first. -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* CoFOR GIS components. Every value is a token from tokens.json (tokens.css).
+   Extracted from gis-maps/AcreageByCounty, gis-maps/CIP, gis-apps/FieldExtractor
+   and gis-apps/LUAEditor; class names are prefixed cfr- (City of Fair Oaks Ranch). */
+
+.cfr { font-family: var(--font-sans); color: var(--text-ink); -webkit-font-smoothing: antialiased; }
+.cfr *, .cfr *::before, .cfr *::after { box-sizing: border-box; }
+.cfr :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* ---------- Masthead ---------- */
+.cfr-masthead { display: flex; align-items: center; gap: var(--space-4); padding: 18px var(--space-6);
+  background: var(--bg-card); border-bottom: 2px solid var(--brand-sage); }
+.cfr-masthead__mark { height: 42px; width: auto; flex: none; display: block; }
+.cfr-masthead__titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cfr-masthead__title { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 30px;
+  line-height: 1.05; color: var(--text-heading); }
+.cfr-masthead__org { margin-left: auto; text-align: right; font-size: 12px; line-height: 1.4; color: var(--text-muted); }
+.cfr-masthead__org b { color: var(--text-heading); font-weight: 600; }
+.cfr-masthead--admin { background: var(--dept-admin); border-bottom-color: var(--brand-gold); }
+.cfr-masthead--admin .cfr-masthead__title, .cfr-masthead--admin .cfr-masthead__org b { color: var(--brand-cream); }
+.cfr-masthead--admin .cfr-masthead__org, .cfr-masthead--admin .cfr-eyebrow { color: var(--brand-tan); }
+
+/* ---------- Eyebrow ---------- */
+.cfr-eyebrow { font-size: 11px; line-height: 14px; letter-spacing: .16em; text-transform: uppercase;
+  font-weight: 700; color: var(--text-accent); }
+
+/* ---------- Button ---------- */
+.cfr-btn { display: inline-flex; align-items: center; gap: 7px; font: 600 13px/16px var(--font-sans);
+  padding: 9px 14px; border-radius: var(--radius-md); border: 1px solid transparent; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s; }
+.cfr-btn--primary { background: var(--action-primary); color: var(--action-primary-text); }
+.cfr-btn--primary:hover { background: var(--action-primary-hover); }
+.cfr-btn--secondary { background: var(--bg-card); color: var(--text-heading); border-color: var(--line);
+  box-shadow: var(--shadow-control); }
+.cfr-btn--secondary:hover { border-color: var(--brand-sage); }
+.cfr-btn--outline { background: transparent; color: var(--text-ink); border-color: var(--line-strong); }
+.cfr-btn--outline:hover { border-color: var(--text-muted); background: var(--bg-page); }
+.cfr-btn--danger { background: var(--status-error-wash); color: var(--status-error); border-color: var(--status-error); }
+.cfr-btn--small { font-size: 12px; padding: 6px 11px; }
+.cfr-btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* ---------- Segmented control ---------- */
+.cfr-segmented { display: inline-flex; gap: 3px; padding: 3px; background: var(--bg-page);
+  border: 1px solid var(--line); border-radius: 9px; }
+.cfr-segmented button { border: none; background: none; font: 600 12.5px/16px var(--font-sans);
+  color: var(--text-muted); padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; }
+.cfr-segmented button[aria-pressed="true"] { background: var(--action-primary); color: var(--action-primary-text); }
+.cfr-segmented button[disabled] { opacity: .38; cursor: default; }
+
+/* ---------- Stat band (KPI) ---------- */
+.cfr-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px;
+  background: var(--line); border-block: 1px solid var(--line); }
+.cfr-stat { background: var(--bg-page); padding: 18px var(--space-6); }
+.cfr-stat__label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700;
+  color: var(--text-muted); margin-bottom: 6px; }
+.cfr-stat__label em { font-style: normal; color: var(--text-accent); }
+.cfr-stat__value { font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1; color: var(--text-heading); }
+.cfr-stat__unit { font: 600 .45em var(--font-sans); color: var(--text-muted); margin-left: 6px; }
+
+/* ---------- Panel ---------- */
+.cfr-panel { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: var(--space-5); box-shadow: var(--shadow-sm); }
+.cfr-panel__title { margin: 0 0 4px; font: 600 19px/24px var(--font-display); color: var(--text-heading); }
+.cfr-panel__sub { margin: 0 0 14px; font-size: 12.5px; line-height: 19px; color: var(--text-muted); }
+
+/* ---------- Field ---------- */
+.cfr-field { display: flex; flex-direction: column; gap: 5px; }
+.cfr-field label { font-size: 12px; font-weight: 600; color: var(--text-ink); }
+.cfr-field input, .cfr-field select { font: 400 13.5px/20px var(--font-sans); color: var(--text-ink);
+  background: var(--bg-card); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 8px 11px; }
+.cfr-field input.is-code { font-family: var(--font-mono); font-size: 12px; }
+.cfr-field input:focus { outline: none; border-color: var(--brand-sage); box-shadow: 0 0 0 3px var(--sage-wash); }
+.cfr-field input[aria-invalid="true"] { border-color: var(--status-error); }
+.cfr-field__hint { font-size: 11.5px; line-height: 16px; color: var(--text-muted); }
+.cfr-field__hint.is-error { color: var(--status-error); }
+
+/* ---------- Toggle ---------- */
+.cfr-toggle { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.cfr-toggle input { appearance: none; margin: 0; width: 34px; height: 19px; border-radius: var(--radius-pill);
+  background: var(--bg-sunken); border: 1px solid var(--line-strong); position: relative; cursor: pointer; transition: all .2s; }
+.cfr-toggle input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px;
+  border-radius: 50%; background: var(--text-muted); transition: all .2s; }
+.cfr-toggle input:checked { background: var(--sage-wash); border-color: var(--brand-sage); }
+.cfr-toggle input:checked::after { left: 17px; background: var(--brand-sage); }
+
+/* ---------- Status bar ---------- */
+.cfr-status { display: flex; align-items: center; gap: 9px; padding: 9px 13px; border-radius: var(--radius-sm);
+  border: 1px solid; font-size: 12.5px; line-height: 18px; font-weight: 500; }
+.cfr-status__icon { font-weight: 700; flex: none; width: 16px; text-align: center; }
+.cfr-status--info { background: var(--status-info-wash); border-color: var(--status-info); color: var(--status-info); }
+.cfr-status--success { background: var(--status-success-wash); border-color: var(--status-success); color: var(--status-success); }
+.cfr-status--warning { background: var(--status-warning-wash); border-color: var(--status-warning); color: var(--status-warning); font-weight: 700; }
+.cfr-status--error { background: var(--status-error-wash); border-color: var(--status-error); color: var(--status-error); }
+
+/* ---------- Tag ---------- */
+.cfr-tag { display: inline-block; font: 600 11px/16px var(--font-mono); padding: 1px 6px; border-radius: var(--radius-xs); }
+.cfr-tag--sage { background: var(--sage-wash); color: var(--text-accent); }
+.cfr-tag--success { background: var(--status-success-wash); color: var(--status-success); }
+.cfr-tag--info { background: var(--status-info-wash); color: var(--status-info); }
+.cfr-tag--warning { background: var(--status-warning-wash); color: var(--status-warning); }
+.cfr-tag--error { background: var(--status-error-wash); color: var(--status-error); }
+.cfr-tag--muted { background: var(--bg-sunken); color: var(--text-ink); }
+
+/* ---------- Legend + share band ---------- */
+.cfr-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11.5px; color: var(--text-muted); }
+.cfr-legend__key { display: inline-block; width: 15px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.cfr-band { height: 9px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; display: flex; }
+.cfr-band > span { height: 100%; }
+
+/* ---------- Popup card (inside the ArcGIS popup) ---------- */
+.cfr-popcard { display: flex; min-width: 210px; font-family: var(--font-sans); }
+.cfr-popcard__bar { width: 5px; border-radius: 3px; background: var(--popcard-accent, var(--brand-navy)); margin-right: 13px; flex: none; }
+.cfr-popcard__value { font: 700 30px/1 var(--font-display); color: var(--text-heading); margin-top: 4px; }
+.cfr-popcard__value span { font: 600 13px var(--font-sans); color: var(--text-muted); margin-left: 6px; }
+.cfr-popcard__addr { font-size: 13px; color: var(--text-ink); margin-top: 7px; }
+
+/* ---------- Menu ---------- */
+.cfr-menu { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay); overflow: hidden; min-width: 168px; }
+.cfr-menu__group { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+  color: var(--text-muted); padding: 9px 14px 4px; }
+.cfr-menu button { display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 10px 14px; font: 400 13px var(--font-sans); color: var(--text-ink); cursor: pointer; }
+.cfr-menu button:hover { background: var(--bg-page); color: var(--text-heading); }
+
+/* ---------- Loading / empty state ---------- */
+.cfr-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: var(--space-6); text-align: center; font-size: 13.5px; color: var(--text-muted); background: var(--bg-page); }
+.cfr-state b { font-size: 15px; color: var(--text-heading); }
+.cfr-spinner { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--line);
+  border-top-color: var(--brand-sage); animation: cfr-spin .8s linear infinite; }
+@keyframes cfr-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Banner (over the map) ---------- */
+.cfr-banner { display: inline-block; background: var(--bg-inverse); color: var(--text-inverse); font-size: 12.5px;
+  line-height: 18px; padding: 9px 14px; border-radius: var(--radius-md); box-shadow: var(--shadow-overlay); max-width: 80%; }
+
+/* ---------- Footer ---------- */
+.cfr-footer { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 12px var(--space-6); background: var(--bg-card);
+  border-top: 1px solid var(--line); font-size: 11px; color: var(--text-muted); }
+.cfr-footer__dot { color: var(--brand-sage); }
+
+@media (prefers-reduced-motion: reduce) { .cfr-spinner { animation: none; } .cfr-btn, .cfr-toggle input { transition: none; } }
+
+/* CoFOR GIS Design System - generated from tokens.json (review copy version 1794335045-9fa6). Do not edit by hand. */
+
+:root, [data-theme="cream"] {
+  --bg-page: #faf6ee;
+  --bg-card: #ffffff;
+  --bg-sunken: #f3eee2;
+  --bg-inverse: #192737;
+  --text-ink: #1f2a36;
+  --text-heading: #192737;
+  --text-muted: #6b6f66;
+  --text-accent: #68734d;
+  --text-inverse: #ffffff;
+  --line: #e4decf;
+  --line-strong: #c9c2b3;
+  --brand-navy: #192737;
+  --brand-cream: #faf6ee;
+  --brand-sage: #8d956c;
+  --brand-sage-hover: #7c8459;
+  --brand-amber: #d49a4e;
+  --brand-gold: #c8a94e;
+  --brand-tan: #d4ca96;
+  --brand-sky: #b0c1c9;
+  --brand-olive-deep: #717c60;
+  --brand-brick: #a64850;
+  --action-primary: #192737;
+  --action-primary-hover: #22334a;
+  --action-primary-text: #ffffff;
+  --focus-ring: var(--text-accent);
+  --status-success: #3d7a4a;
+  --status-info: #4a7c90;
+  --status-warning: #9a7f2e;
+  --status-error: #a64850;
+  --status-success-wash: rgba(61,122,74,0.08);
+  --status-info-wash: rgba(74,124,144,0.08);
+  --status-warning-wash: rgba(200,169,78,0.10);
+  --status-error-wash: rgba(166,72,80,0.08);
+  --sage-wash: rgba(141,149,108,0.12);
+  --dept-admin: #1b3a2d;
+  --dept-admin-soft: #2d5e47;
+  --dept-engineering: #23282c;
+  --dept-engineering-steel: #6b757c;
+  --dept-emergency: #1c2a40;
+  --county-bexar: var(--brand-navy);
+  --county-kendall: var(--brand-sage);
+  --county-comal: #d49a4e;
+  --county-other: #b7b2a6;
+  --cip-water: var(--brand-sky);
+  --cip-wastewater: var(--brand-navy);
+  --cip-roadway: var(--brand-sage);
+  --cip-drainage: var(--brand-olive-deep);
+  --cip-building: var(--brand-brick);
+  --sev-0: #1e7b3c;
+  --sev-1: #f2b705;
+  --sev-2: #e8721c;
+  --sev-3: #ce2029;
+  --sev-4: #7a0c1f;
+  --shadow-sm: 0 1px 2px rgba(25,39,55,0.05);
+  --shadow-md: 0 4px 12px rgba(25,39,55,0.07);
+  --shadow-control: 0 1px 4px rgba(25,39,55,0.12);
+  --shadow-overlay: 0 6px 22px rgba(25,39,55,0.18);
+}
+
+[data-theme="navy"] {
+  --bg-page: #192737;
+  --bg-card: #22334a;
+  --bg-sunken: #101b2d;
+  --bg-inverse: #faf6ee;
+  --text-ink: #f2ecd8;
+  --text-heading: #faf6ee;
+  --text-muted: #cfc6a8;
+  --text-accent: #a8ae8e;
+  --text-inverse: #192737;
+  --line: rgba(242,236,216,0.14);
+  --line-strong: #2e4160;
+  --brand-amber: #e8b779;
+  --action-primary: #8d956c;
+  --action-primary-hover: #a8ae8e;
+  --action-primary-text: #192737;
+  --focus-ring: var(--text-accent);
+  --status-success: #7fb069;
+  --status-info: #4fc3d4;
+  --status-warning: #e0a83a;
+  --status-error: #ff8a93;
+  --county-bexar: var(--brand-cream);
+  --county-kendall: var(--brand-sage);
+  --cip-water: var(--brand-sky);
+  --cip-wastewater: var(--brand-cream);
+  --cip-roadway: var(--brand-sage);
+  --cip-drainage: var(--brand-olive-deep);
+  --cip-building: var(--brand-brick);
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 28px;
+  --space-7: 40px;
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --header-height: 56px;
+  --rail-width: 396px;
+  --panel-width: 380px;
+  --content-max: 1200px;
+  --breakpoint-stack: 880px;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.cfr-t-display-xl { font-family: var(--font-display); font-size: 40px; line-height: 1; font-weight: 700; }
+
+.cfr-t-display-lg { font-family: var(--font-display); font-size: 30px; line-height: 1.05; font-weight: 700; }
+
+.cfr-t-display-md { font-family: var(--font-display); font-size: 28px; line-height: 1.1; font-weight: 700; }
+
+.cfr-t-heading { font-family: var(--font-display); font-size: 19px; line-height: 24px; font-weight: 600; }
+
+.cfr-t-title-sm { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 700; }
+
+.cfr-t-body { font-family: var(--font-sans); font-size: 13.5px; line-height: 20px; font-weight: 400; }
+
+.cfr-t-small { font-family: var(--font-sans); font-size: 12.5px; line-height: 19px; font-weight: 400; }
+
+.cfr-t-label { font-family: var(--font-sans); font-size: 13px; line-height: 16px; font-weight: 600; }
+
+.cfr-t-eyebrow { font-family: var(--font-sans); font-size: 11px; line-height: 14px; font-weight: 700; letter-spacing: 0.16em; }
+
+.cfr-t-caption { font-family: var(--font-sans); font-size: 11.5px; line-height: 18px; font-weight: 400; }
+
+.cfr-t-code { font-family: var(--font-mono); font-size: 11px; line-height: 16px; font-weight: 500; }
+
+.cfr-t-data { font-family: var(--font-mono); font-size: 12px; line-height: 18px; font-weight: 400; }
+</style>
 <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
 <!--
   CoFOR Radar Sign Editor  (cofor-gis/gis-apps/RadarSignEditor)
@@ -27,56 +312,61 @@
   AGOL sharing of the authoritative layer.
 -->
 <style>
-:root{--ink:#1F1E1A;--ink2:#2a2924;--ink3:#34322c;--line:#47443b;--accent:#D49A4E;--accent2:#e8b779;--text:#f2eee6;--dim:#b5ad9e;--ok:#7fb069;--warn:#e0a83a;--bad:#e05d4f;--float:#4fc3d4;--ret:#8b8578;--r:8px}
+/* App styles on the CoFOR GIS design system (_design/README.md, D-050), Navy theme.
+   The app's own variable names are kept and point at design-system tokens, so every rule and
+   the classes the script toggles (.on .open .bad .sel .row .msg) are unchanged.
+   Status colours for the data (Fixed / Floating / Retired) stay in the script and the legend. */
+:root{--ink:var(--bg-page);--ink2:var(--bg-card);--ink3:var(--bg-sunken);--accent:var(--brand-sage);--accent2:var(--text-accent);--text:var(--text-ink);--dim:var(--text-muted);--ok:var(--status-success);--warn:var(--status-warning);--bad:var(--status-error);--float:var(--status-info);--ret:#8b8578;--r:var(--radius-md)}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{background:var(--ink);color:var(--text);font-family:Manrope,system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
-h1,h2,h3{font-family:'Bricolage Grotesque',Manrope,sans-serif;font-weight:700}
+body{background:var(--ink);color:var(--text);font-family:var(--font-sans);font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;font-variant-numeric:lining-nums}  /* lining figures: IDs like RS01 must not read as RSo1 */
 button,input,select,textarea{font-family:inherit;font-size:13px}
 .hdr{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--ink2);border-bottom:2px solid var(--accent);flex-shrink:0}
 .hdr img{height:38px;width:auto}
-.hdr h1{font-size:18px;line-height:1.1}
+.hdr h1{font-size:18px;line-height:1.1;color:var(--text-heading)}
 .hdr .sub{font-size:11px;color:var(--dim)}
 .hdr .sp{flex:1}
 .hdr .who{font-size:12px;color:var(--dim);text-align:right}
 .hdr a,.lnk{color:var(--accent2);text-decoration:none}
-.btn{background:var(--ink3);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:600;white-space:nowrap}
-.btn:hover{border-color:var(--accent)}
-.btn.pri{background:var(--accent);color:#1F1E1A;border-color:var(--accent)}
-.btn.pri:hover{background:var(--accent2)}
-.btn.on{background:var(--float);color:#111;border-color:var(--float)}
+.btn{background:transparent;color:var(--text);border:1px solid var(--line-strong);border-radius:var(--radius-md);padding:7px 12px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:var(--accent);background:var(--ink)}
+.btn.pri{background:var(--action-primary);color:var(--action-primary-text);border-color:var(--action-primary)}
+.btn.pri:hover{background:var(--action-primary-hover);border-color:var(--action-primary-hover)}
+.btn.on{background:var(--float);color:var(--text-inverse);border-color:var(--float)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .app{flex:1;display:flex;min-height:0}
 .side{width:300px;flex-shrink:0;background:var(--ink2);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
 .side .top{padding:12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
-.side .top input{flex:1;min-width:0;background:var(--ink);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:7px 9px}
+.side .top input{flex:1;min-width:0;background:var(--ink3);border:1px solid var(--line-strong);border-radius:var(--radius-sm);color:var(--text);padding:7px 9px}
+.side .top input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--sage-wash)}
 .list{overflow:auto;flex:1;padding:6px 8px 16px}
-.grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin:12px 4px 4px}
-.row{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:6px;padding:6px 8px;color:var(--text);cursor:pointer}
-.row:hover{background:var(--ink3)}
-.row.sel{background:var(--ink3);border-color:var(--accent)}
+.grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent2);font-weight:700;margin:12px 4px 4px}
+.row{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:var(--radius-sm);padding:6px 8px;color:var(--text);cursor:pointer}
+.row:hover{background:var(--ink)}
+.row.sel{background:var(--ink);border-color:var(--accent)}
 .row .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .row .t{flex:1;min-width:0}
-.row .sid{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--accent2)}
+.row .sid{font-family:var(--font-mono);font-size:12px;color:var(--accent2)}
 .row .nm{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .flag{font-size:10px;color:var(--warn);white-space:nowrap}
 .mapwrap{flex:1;position:relative;min-width:0}
 #map{position:absolute;inset:0}
-.banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--float);color:#111;font-weight:700;padding:8px 14px;border-radius:20px;z-index:10;display:none;box-shadow:0 4px 14px rgba(0,0,0,.4)}
-.legend{position:absolute;left:12px;bottom:26px;background:rgba(31,30,26,.92);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font-size:11px;color:var(--dim);line-height:1.7;z-index:5}
+.banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--float);color:var(--text-inverse);font-weight:700;padding:8px 14px;border-radius:20px;z-index:10;display:none;box-shadow:var(--shadow-overlay)}
+.legend{position:absolute;left:12px;bottom:26px;background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font-size:11px;color:var(--dim);line-height:1.7;z-index:5}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
 .panel{width:360px;flex-shrink:0;background:var(--ink2);border-left:1px solid var(--line);overflow:auto;display:none}
 .panel.open{display:block}
 .panel .ph{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:8px}
-.panel .ph h2{font-size:17px}
+.panel .ph h2{font-size:17px;color:var(--text-heading)}
 .panel .ph .meta{font-size:11px;color:var(--dim);margin-top:2px}
 .panel .ph .x{margin-left:auto;background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;line-height:1}
 .sec{padding:12px 16px;border-bottom:1px solid var(--line)}
-.sec h3{font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;font-family:Manrope,sans-serif}
+.sec h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin-bottom:8px;font-family:var(--font-sans)}
 .f{margin-bottom:9px}
-.f label{display:block;font-size:11px;color:var(--dim);margin-bottom:3px}
-.f input,.f select,.f textarea{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:7px 9px}
-.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--accent)}
+.f label{display:block;font-size:11px;color:var(--dim);font-weight:600;margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;background:var(--ink3);border:1px solid var(--line-strong);border-radius:var(--radius-sm);color:var(--text);padding:7px 9px}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--sage-wash)}
 .f .err{color:var(--bad);font-size:11px;margin-top:2px;display:none}
 .f.bad input{border-color:var(--bad)}.f.bad .err{display:block}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -84,16 +374,23 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
 .dial svg{width:150px;height:150px;flex-shrink:0;touch-action:none;cursor:grab}
 .dial .txt{font-size:12px;line-height:1.55;color:var(--dim)}
 .dial .txt b{color:var(--text)}
+/* Dial chrome from tokens (CSS outranks the SVG's colour attributes); the amber and cyan arrows are data colours and stay. */
+#dial>circle:first-child{fill:var(--ink3);stroke:var(--line-strong)}
+#dial>circle:last-child{fill:var(--text)}
+#ticks line{stroke:var(--line-strong)}
+#dial>text{fill:var(--dim);font-family:var(--font-sans)}
+#dial>text:first-of-type{fill:var(--text)}
+#faceArrow circle{stroke:var(--ink3)}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
 .hint{font-size:11px;color:var(--dim);line-height:1.5;margin-top:6px}
-.msg{position:fixed;right:16px;bottom:16px;max-width:380px;padding:10px 14px;border-radius:var(--r);font-weight:600;z-index:50;display:none;box-shadow:0 6px 20px rgba(0,0,0,.45)}
-.msg.ok{background:var(--ok);color:#111;display:block}.msg.err{background:var(--bad);color:#fff;display:block}
+.msg{position:fixed;right:16px;bottom:16px;max-width:380px;padding:10px 14px;border-radius:var(--r);font-weight:600;z-index:50;display:none;box-shadow:var(--shadow-overlay)}
+.msg.ok{background:var(--ok);color:var(--text-inverse);display:block}.msg.err{background:var(--bad);color:var(--text-inverse);display:block}
 .inv{font-size:12px;line-height:1.6}
 .inv span{color:var(--dim)}
 .gate{position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:100;text-align:center;padding:20px}
 .gate .box{max-width:420px}
-.gate h2{margin:12px 0 6px}.gate p{color:var(--dim);line-height:1.6;margin-bottom:14px}
-.moveBox{background:rgba(79,195,212,.08);border:1px solid rgba(79,195,212,.4);border-radius:var(--r);padding:10px;margin-top:8px}
+.gate h2{margin:12px 0 6px;color:var(--text-heading)}.gate p{color:var(--dim);line-height:1.6;margin-bottom:14px}
+.moveBox{background:transparent;border:1px solid var(--float);border-radius:var(--r);padding:10px;margin-top:8px}
 @media (max-width:900px){
   .app{flex-direction:column;overflow:auto}
   .side{width:100%;max-height:30vh;border-right:none;border-bottom:1px solid var(--line)}
@@ -103,7 +400,7 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
 }
 </style>
 </head>
-<body>
+<body class="cfr">
 <div class="gate" id="gate"><div class="box">
   <img src="logo.svg" alt="City of Fair Oaks Ranch" style="height:64px">
   <h2>Radar Sign Editor</h2>
