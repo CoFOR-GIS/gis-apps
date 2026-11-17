@@ -7,115 +7,143 @@
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
+<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
 <!--
   CoFOR Pavement Estimator  (CoFOR-GIS/gis-apps/PavementEstimator)  -  WO-0016, D-060, Ref PAVEST-APP-20261117
+  v1.1.0: roads picked individually (all Cartegraph segments), several treatments per road, editable square yards,
+  walk-through guide, gis.local look (Ernie's live review 2026-11-17).
   STAFF ONLY. Served over HTTPS from GitHub Pages: https://cofor-gis.github.io/gis-apps/PavementEstimator/
   (rule R1: ArcGIS sign-in apps need an https redirect URI; gis.local carries only a link/redirect, installed by ChatGPT.)
   Access is enforced by ArcGIS Online sharing, not by this code:
-   - planned work: "Pavement Treatment Planned (Internal)" view (private / staff)
+   - roads: "Pavement Treatment History (Public View)" Segments (shared with Everyone, read only)
    - rates: "Pavement Estimator Rates (Internal View)", Query only, shared with the Organization
    - overrides: "Pavement Estimator Rates (Internal Editing)", add + update only, group "Pavement Estimator Editors"
   This repo is public: never put data, credentials or tokens in this file.
 
-  Rules (approved handoff APPROVED_20261117.md, D-060):
-   - Rates come from the current annual Cartegraph snapshot (Rate_Snapshots). Only Rate_Status = Confirmed is used;
-     anything else shows as unavailable and is left out of the total.
-   - Overrides are kept separately (Rate_Overrides). An Active override in its date range replaces the snapshot rate and
-     is shown as an override. Overrides need a rate, effective date, approver and reason. They are never deleted:
-     retiring sets Status = Retired and End_Date = today.
-   - Area: Cartegraph calculated square yards is the labelled default; the traced polygon area is an explicit
-     alternative where the task has one (whole polygon).
-   - The protocol's OCI trigger range is shown as guidance, not as a rule. Estimates are advisory.
-   - Every export records the snapshot, the rate source and any override used, line by line.
+  Rules (approved handoff APPROVED_20261117.md, D-060, as refined by Ernie 2026-11-17):
+   - Rates come from the current annual Cartegraph snapshot. Only Rate_Status = Confirmed rates (or an active override)
+     are offered as treatments.
+   - Overrides are kept separately (Rate_Overrides) and labelled; retiring sets Status = Retired, End_Date = today.
+     Never deletes.
+   - Area: Cartegraph calculated square yards; the user may type a different figure for a road, which is marked
+     "edited" on screen and in the export. (The traced-polygon option was dropped: polygons are whole project areas.)
+   - The protocol's OCI trigger range is a hover tip on the treatment name (guidance only). Estimates are advisory.
   Sign-in: redirect OAuth, app ID DhZk7VoirUPP4Sa2.
 -->
 <style>
-:root{--ink:#1F1E1A;--ink2:#2a2924;--ink3:#34322c;--line:#47443b;--accent:#D49A4E;--accent2:#e8b779;--text:#f2eee6;--dim:#b5ad9e;--ok:#7fb069;--warn:#e0a83a;--bad:#e05d4f;--ovr:#4fc3d4;--r:8px}
+/* gis.local theme tokens (http://gis.local/ hub) */
+:root{--paper:#faf6ee;--card:#fffdf8;--ink:#192737;--muted:#526075;--line:#d6d8cf;--sage:#6b7750;--amber:#a77229;--amber2:#c48a3a;--bad:#a8432f;--ovr:#2f6f86;--display:'Bricolage Grotesque','Segoe UI',sans-serif;--body:Manrope,'Segoe UI',sans-serif;--mono:Consolas,monospace;--r:8px}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{background:var(--ink);color:var(--text);font-family:Manrope,system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
-h1,h2,h3{font-family:'Bricolage Grotesque',Manrope,sans-serif;font-weight:700}
-button,input,select,textarea{font-family:inherit;font-size:13px}
-.hdr{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--ink2);border-bottom:2px solid var(--accent);flex-shrink:0}
-.hdr img{height:38px;width:auto}
-.hdr h1{font-size:18px;line-height:1.1}
-.hdr .sub{font-size:11px;color:var(--dim)}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+h1,h2,h3{font-family:var(--display);font-weight:700}
+button,input,select,textarea{font-family:inherit;font-size:13px;color:var(--ink)}
+.kick{font-family:var(--mono);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.hdr{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--paper);border-bottom:1px solid var(--line);flex-shrink:0}
+.hdr img{height:36px;width:auto}
+.hdr h1{font-size:19px;line-height:1.1}
 .hdr .sp{flex:1}
-.hdr .who{font-size:12px;color:var(--dim);text-align:right}
-.hdr a{color:var(--accent2);text-decoration:none}
-.btn{background:var(--ink3);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:600;white-space:nowrap}
-.btn:hover{border-color:var(--accent)}
-.btn.pri{background:var(--accent);color:#1F1E1A;border-color:var(--accent)}
-.btn.pri:hover{background:var(--accent2)}
-.btn.sm{padding:3px 8px;font-size:12px}
+.hdr .who{font-size:12px;color:var(--muted);text-align:right}
+.hdr a{color:var(--amber);text-decoration:none}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:var(--ink)}
+.btn.pri{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.pri:hover{background:#26384d}
+.btn.sm{padding:4px 9px;font-size:12px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-.warnbar{background:rgba(224,168,58,.15);border-bottom:1px solid var(--warn);color:var(--warn);padding:6px 16px;font-size:12px;display:none;flex-shrink:0}
+input[type=text],input[type=search],input[type=date],input[type=number],select,textarea{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--amber)}
+.warnbar{background:#f6ead3;border-bottom:1px solid var(--amber);color:#6b4a17;padding:6px 18px;font-size:12px;display:none;flex-shrink:0}
 .app{flex:1;display:flex;min-height:0}
-.side{width:300px;flex-shrink:0;background:var(--ink2);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.side .top{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--line)}
-.side .top input{grid-column:1 / -1}
-.side select,.side input,.panel select,.modal input,.modal select,.modal textarea{width:100%;min-width:0;background:var(--ink);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:6px 8px}
-.side .acts{padding:8px 12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
-.list{overflow:auto;flex:1;padding:4px 8px 16px}
-.grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin:12px 4px 4px}
-.row{display:flex;gap:8px;align-items:flex-start;border:1px solid transparent;border-radius:6px;padding:5px 6px;cursor:pointer}
-.row:hover{background:var(--ink3)}
-.row.sel{background:var(--ink3);border-color:var(--accent)}
-.row input[type=checkbox]{width:auto;flex:none;margin-top:2px;accent-color:var(--accent)}
-.row .st{font-size:12px}
-.row .nm{font-size:11px;color:var(--dim)}
+.side{width:290px;flex-shrink:0;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side .top{padding:12px 14px 8px}
+.side .top input{width:100%;margin-top:6px}
+.side .cnt{padding:0 14px 8px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between}
+.list{overflow:auto;flex:1;border-top:1px solid var(--line)}
+.row{display:flex;gap:9px;align-items:center;padding:6px 14px;cursor:pointer;border-bottom:1px solid #ece9df}
+.row:hover{background:#f3eee2}
+.row.sel{background:#f1e6d1}
+.row input{flex:none;accent-color:var(--amber)}
+.row .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .sy{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
 .mapwrap{flex:1;position:relative;min-width:0}
 #map{position:absolute;inset:0}
-.legend{position:absolute;left:12px;bottom:26px;background:rgba(31,30,26,.92);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font-size:11px;color:var(--dim);line-height:1.6;z-index:5;max-width:250px}
-.panel{width:470px;flex-shrink:0;background:var(--ink2);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.panel .ph{padding:12px 16px;border-bottom:1px solid var(--line)}
-.panel .ph h2{font-size:17px}
-.panel .ph .meta{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.5}
-.lines{flex:1;overflow:auto;padding:8px 12px}
-.ln{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;margin-bottom:8px;background:var(--ink)}
-.ln .t{display:flex;gap:8px;align-items:flex-start}
-.ln .t b{font-size:13px}
-.ln .t .x{margin-left:auto;background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;line-height:1}
-.ln .s{font-size:11px;color:var(--dim);margin:2px 0 6px}
-.ln .g{display:grid;grid-template-columns:1.4fr 1fr;gap:6px}
-.ln .p{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:12px;gap:8px}
-.ln .p .c{font-weight:700;font-size:14px}
-.ln .gd{font-size:11px;color:var(--dim);margin-top:4px}
-.tag{display:inline-block;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
-.tag.snap{background:rgba(127,176,105,.18);color:var(--ok)}
-.tag.ovr{background:rgba(79,195,212,.18);color:var(--ovr)}
-.tag.na{background:rgba(224,93,79,.18);color:var(--bad)}
-.tot{border-top:2px solid var(--accent);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.tot .sum{font-size:20px;font-weight:700;font-family:'Bricolage Grotesque',Manrope,sans-serif}
-.tot .note{font-size:11px;color:var(--dim);flex-basis:100%}
-.empty{color:var(--dim);padding:16px 6px;line-height:1.6}
-.msg{position:fixed;right:16px;bottom:16px;max-width:400px;padding:10px 14px;border-radius:var(--r);font-weight:600;z-index:90;display:none;box-shadow:0 6px 20px rgba(0,0,0,.45);white-space:pre-line}
-.msg.ok{background:var(--ok);color:#111;display:block}.msg.err{background:var(--bad);color:#fff;display:block}
+.panel{width:460px;flex-shrink:0;border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--paper)}
+.panel .ph{padding:12px 16px 10px;border-bottom:1px solid var(--line)}
+.panel .ph h2{font-size:18px;margin-top:2px}
+.bulk{display:flex;gap:8px;margin-top:8px}
+.bulk select{flex:1}
+.lines{flex:1;overflow:auto;padding:10px 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;margin-bottom:9px}
+.card .t{display:flex;gap:8px;align-items:center}
+.card .t b{font-family:var(--display);font-size:14px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .x{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
+.card .syr{display:flex;align-items:center;gap:6px;margin:6px 0;font-size:12px;color:var(--muted)}
+.card .syr input{width:96px;font-family:var(--mono);text-align:right}
+.card .ed{font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.5px}
+.card .rst{background:none;border:none;color:var(--amber);cursor:pointer;font-size:11px;text-decoration:underline}
+.tr{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px dashed #e4e0d4;font-size:12px}
+.tr .n{flex:1;min-width:0}
+.tr .n span{border-bottom:1px dotted var(--muted);cursor:help}
+.tr .m{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.tr .c{font-weight:700;white-space:nowrap;min-width:84px;text-align:right}
+.tr .x{font-size:15px}
+.tag{display:inline-block;border-radius:4px;padding:0 5px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;background:#dceaf0;color:var(--ovr);margin-left:4px}
+.addt{display:flex;gap:6px;margin-top:6px}
+.addt select{flex:1}
+.card .sub{display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid var(--line);font-size:12px}
+.card .sub b{font-size:13px}
+details.meta{margin-top:4px;font-size:11px;color:var(--muted)}
+details.meta summary{cursor:pointer;color:var(--amber);list-style:none}
+details.meta summary::-webkit-details-marker{display:none}
+details.meta div{line-height:1.6;margin-top:3px}
+.tot{border-top:2px solid var(--ink);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card)}
+.tot .sum{font-size:22px;font-weight:700;font-family:var(--display)}
+.tot .note{font-size:11px;color:var(--muted);flex-basis:100%}
+.empty{color:var(--muted);padding:18px 8px;line-height:1.6}
+.msg{position:fixed;right:16px;bottom:16px;max-width:400px;padding:10px 14px;border-radius:var(--r);font-weight:600;z-index:95;display:none;box-shadow:0 6px 20px rgba(25,39,55,.25);white-space:pre-line}
+.msg.ok{background:var(--sage);color:#fff;display:block}.msg.err{background:var(--bad);color:#fff;display:block}
 .gate,.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px}
-.gate{background:var(--ink);z-index:100;text-align:center}
+.gate{background:var(--paper);z-index:100;text-align:center}
 .gate .box{max-width:460px}
-.gate h2{margin:12px 0 6px}.gate p{color:var(--dim);line-height:1.6;margin-bottom:14px}
-.modal{background:rgba(0,0,0,.6);z-index:80;display:none}
-.modal .box{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);max-width:860px;width:100%;max-height:88vh;overflow:auto;padding:16px}
-.modal h2{font-size:17px;margin-bottom:6px}
-.modal .hint{font-size:11px;color:var(--dim);line-height:1.5;margin-bottom:8px}
-.modal table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
-.modal th,.modal td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
-.modal th{color:var(--dim);font-weight:600}
-.modal td.n{text-align:right;white-space:nowrap}
-.frm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
-.frm label{font-size:11px;color:var(--dim);display:block;margin-bottom:3px}
+.gate h2{margin:12px 0 6px}.gate p{color:var(--muted);line-height:1.6;margin-bottom:14px}
+.modal{background:rgba(25,39,55,.45);z-index:80;display:none}
+.modal .box{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);max-width:720px;width:100%;max-height:88vh;overflow:auto;padding:18px}
+.modal h2{font-size:18px}
+.modal .hint{font-size:12px;color:var(--muted);line-height:1.5;margin:4px 0 8px}
+.modal table{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0}
+.modal th,.modal td{text-align:left;padding:6px;border-bottom:1px solid var(--line);vertical-align:top}
+.modal th{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:400}
+.modal td.r{text-align:right;font-family:var(--mono);white-space:nowrap}
+.modal td .w{font-size:11px;color:var(--muted)}
+.modal td span.tip{border-bottom:1px dotted var(--muted);cursor:help}
+.frm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.frm label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
+.frm input,.frm select,.frm textarea{width:100%}
 .frm .w{grid-column:1 / -1}
-.errbox{display:none;background:rgba(224,93,79,.12);border:1px solid var(--bad);border-radius:6px;padding:8px 10px;margin-top:8px;font-size:12px;line-height:1.5}
+.errbox{display:none;background:#f6e1db;border:1px solid var(--bad);border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.5}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
+/* walk-through guide */
+.tourveil{position:fixed;inset:0;z-index:90;display:none}
+.tourhole{position:fixed;border-radius:10px;box-shadow:0 0 0 9999px rgba(25,39,55,.55);transition:all .2s;pointer-events:none;z-index:91}
+.tourpop{position:fixed;z-index:92;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;width:320px;box-shadow:0 10px 30px rgba(25,39,55,.3)}
+.tourpop h3{font-size:16px;margin:2px 0 6px}
+.tourpop p{line-height:1.55;color:#33404f}
+.tourpop .acts{margin-top:12px;align-items:center}
+.tourpop .step{font-family:var(--mono);font-size:10px;color:var(--muted);flex:1}
 @media (max-width:1000px){
   .app{flex-direction:column;overflow:auto}
-  .side{width:100%;max-height:38vh;border-right:none;border-bottom:1px solid var(--line)}
-  .mapwrap{min-height:40vh;flex:none;height:40vh}
+  .side{width:100%;max-height:36vh;border-right:none;border-bottom:1px solid var(--line)}
+  .mapwrap{min-height:38vh;flex:none;height:38vh}
   .panel{width:100%;border-left:none;min-height:60vh}
-  .hdr .sub{display:none}
+  .hdr .kick{display:none}
+  .hdr{gap:8px;padding:8px 10px}
+  .hdr h1{font-size:16px}
+  .hdr img{height:30px}
+  .hdr .btn{padding:5px 8px;font-size:12px}
+  .hdr #who{display:none}
   .frm{grid-template-columns:1fr}
+  .tourpop{width:calc(100vw - 32px)}
 }
 </style>
 </head>
@@ -129,32 +157,30 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
 
 <div class="hdr">
   <img src="logo.svg" alt="City of Fair Oaks Ranch">
-  <div><h1>Pavement Estimator</h1><div class="sub">City of Fair Oaks Ranch &#xb7; Public Works &#xb7; staff cost estimates (advisory)</div></div>
+  <div><div class="kick">City of Fair Oaks Ranch &#xb7; Public Works</div><h1>Pavement Estimator</h1></div>
   <div class="sp"></div>
+  <button class="btn" id="tourBtn">How it works</button>
   <button class="btn" id="ratesBtn">Rates</button>
   <div class="who"><div id="who">&#x2014;</div><a href="#" id="signOut">Sign out</a></div>
 </div>
 <div class="warnbar" id="warnbar"></div>
 
 <div class="app">
-  <div class="side">
-    <div class="top">
-      <select id="fYear" title="Planned year"></select>
-      <select id="fTreat" title="Planned treatment"></select>
-      <input id="fText" type="search" placeholder="Street or segment" autocomplete="off">
-    </div>
-    <div class="acts"><button class="btn sm" id="addShown">Add all shown</button><button class="btn sm" id="clearSel">Clear estimate</button></div>
-    <div class="list" id="list"><div class="empty">Loading planned work&#x2026;</div></div>
+  <div class="side" id="sideBox">
+    <div class="top"><div class="kick">Roads</div><input id="q" type="search" placeholder="Find a road" autocomplete="off"></div>
+    <div class="cnt"><span id="cnt">&#x2014;</span><a href="#" id="clearSel" class="lnk" style="color:var(--amber)">Clear</a></div>
+    <div class="list" id="list"><div class="empty">Loading roads&#x2026;</div></div>
   </div>
-  <div class="mapwrap">
-    <div id="map"></div>
-    <div class="legend">Segments with planned work. Click a segment to add or remove its planned tasks.</div>
-  </div>
+  <div class="mapwrap" id="mapBox"><div id="map"></div></div>
   <div class="panel">
-    <div class="ph"><h2>Estimate</h2><div class="meta" id="snapMeta">&#x2014;</div></div>
-    <div class="lines" id="lines"><div class="empty">Tick planned tasks in the list, or click segments on the map.</div></div>
-    <div class="tot">
-      <div><div class="note" style="flex-basis:auto">Total (priced lines)</div><div class="sum" id="total">$0</div></div>
+    <div class="ph" id="bulkBox">
+      <div class="kick">Estimate</div>
+      <h2 id="estTitle">No roads selected</h2>
+      <div class="bulk"><select id="bulkSel" title="Treatment to add to every selected road"></select><button class="btn sm" id="bulkBtn">Add to all roads</button></div>
+    </div>
+    <div class="lines" id="lines"><div class="empty">Tick roads in the list, or click them on the map. Then add one or more treatments to each road.</div></div>
+    <div class="tot" id="totBox">
+      <div><div class="kick">Total</div><div class="sum" id="total">$0.00</div></div>
       <div class="sp" style="flex:1"></div>
       <button class="btn pri" id="exportBtn" disabled>Export CSV</button>
       <div class="note" id="totNote">Advisory estimate. Cartegraph is the system of record.</div>
@@ -163,34 +189,39 @@ button,input,select,textarea{font-family:inherit;font-size:13px}
 </div>
 
 <div class="modal" id="rates"><div class="box">
-  <div style="display:flex;align-items:center;gap:8px"><h2>Rates</h2><div style="flex:1"></div><button class="btn" id="ratesClose">Close</button></div>
+  <div style="display:flex;align-items:center;gap:8px"><h2 style="flex:1">Rates</h2><button class="btn" id="ratesClose">Close</button></div>
   <div class="hint" id="ratesMeta"></div>
   <div id="ratesTable"></div>
   <div id="ovrForm" style="display:none">
     <div class="frm">
-      <div class="w"><b>Add an override</b> <span class="hint">Replaces the snapshot rate for one activity from the effective date. Kept separate from the snapshot; never deleted.</span></div>
-      <div><label for="oAct">Activity</label><select id="oAct"></select></div>
-      <div><label for="oRate">Override rate ($ per SY)</label><input id="oRate" type="text" inputmode="decimal" placeholder="e.g. 7.25"></div>
+      <div class="w"><b>Change a rate</b> <span class="hint">An override replaces the Cartegraph rate from its effective date. It is kept separately and never deleted.</span></div>
+      <div><label for="oAct">Treatment</label><select id="oAct"></select></div>
+      <div><label for="oRate">New rate ($ per SY)</label><input id="oRate" type="text" inputmode="decimal" placeholder="e.g. 7.25"></div>
       <div><label for="oEff">Effective date</label><input id="oEff" type="date"></div>
       <div><label for="oEnd">End date (optional)</label><input id="oEnd" type="date"></div>
       <div class="w"><label for="oAppr">Approver</label><input id="oAppr" type="text" maxlength="60"></div>
-      <div class="w"><label for="oWhy">Reason (required)</label><textarea id="oWhy" rows="2" maxlength="255"></textarea></div>
+      <div class="w"><label for="oWhy">Reason</label><textarea id="oWhy" rows="2" maxlength="255"></textarea></div>
       <div class="w acts"><button class="btn pri" id="oSave">Save override</button></div>
       <div class="w errbox" id="oErr"></div>
     </div>
   </div>
 </div></div>
+
+<div class="tourveil" id="tourVeil"><div class="tourhole" id="tourHole"></div>
+  <div class="tourpop" id="tourPop"><div class="kick" id="tourKick">Walk-through</div><h3 id="tourT"></h3><p id="tourP"></p>
+    <div class="acts"><span class="step" id="tourN"></span><button class="btn sm" id="tourSkip">Close</button><button class="btn sm" id="tourBack">Back</button><button class="btn sm pri" id="tourNext">Next</button></div></div>
+</div>
 <div class="msg" id="msg"></div>
 
 <script>
 const CONFIG = {
   portalUrl: 'https://fairoaksranch.maps.arcgis.com',
   appId: 'DhZk7VoirUPP4Sa2',
-  plannedItemId: '7ac95a464345448aaeddb17755801920',  // Pavement Treatment Planned (Internal): Segments + Treatment_Events
+  roadsItemId: '1c715100f896408697119d73def08461',     // Pavement Treatment History (Public View): Segments (all Cartegraph segments)
   ratesReadItemId: '4a0fbf8bca804ef1b7f6067a924c3c9d', // Pavement Estimator Rates (Internal View): Rate_Snapshots + Rate_Overrides
   ratesEditItemId: 'df344bfe14084239b70fe457322bfe13', // Pavement Estimator Rates (Internal Editing): Rate_Overrides, editors group
-  plannedStatus: 'Planned',
   editorsGroup: 'Pavement Estimator Editors',
+  tourKey: 'cofor-pavest-tour-v1',
   center: [-98.645, 29.74], zoom: 13
 };
 
@@ -202,6 +233,8 @@ const PavRules=(()=>{
   const today=now=>{now=now||new Date();return dayMs(now.getFullYear(),now.getMonth(),now.getDate())};
   const fromInput=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?dayMs(+m[1],+m[2]-1,+m[3]):null};
   const ymd=ms=>{if(ms==null)return '';const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0')};
+  // Display name: the Cartegraph "FOR - " prefix is dropped on screen (the export keeps the full activity name).
+  const label=a=>String(a||'').replace(/^FOR\s*-\s*/,'');
   // Current snapshot: the Snapshot_ID with the latest Effective_Date on or before today.
   function currentSnapshot(rows,t){
     const by=new Map();
@@ -219,30 +252,36 @@ const PavRules=(()=>{
       if(!(typeof o.Override_Rate_Per_SY==='number'&&o.Override_Rate_Per_SY>0))continue;
       if(!best||o.Effective_Date>best.Effective_Date||(o.Effective_Date===best.Effective_Date&&o.OBJECTID>best.OBJECTID))best=o}
     return best}
-  // Rate for an activity: override > confirmed snapshot rate > unavailable (with the reason).
+  // Rate for an activity: override > confirmed snapshot rate > none.
   function rateFor(activity,snap,ovs,t){
     const row=snap?snap.rates.get(activity):null,o=activeOverride(ovs||[],activity,t);
     if(o)return{rate:o.Override_Rate_Per_SY,source:'Override',override:o,row};
-    if(!snap)return{rate:null,source:null,row:null,why:'No rate snapshot is in effect'};
-    if(!row)return{rate:null,source:null,row:null,why:'Not in snapshot '+snap.id};
-    if(!usable(row))return{rate:null,source:null,row,why:row.Rate_Status&&row.Rate_Status!=='Confirmed'?'Rate is '+row.Rate_Status:'No rate in snapshot'};
-    return{rate:row.Rate_Per_SY,source:'Snapshot',row}}
-  // One estimate line. basis: 'cartegraph' (default) or 'polygon'.
-  function priceLine(line,snap,ovs,t){
-    const sy=line.basis==='polygon'?num(line.polySqYd):num(line.cgSqYd);
-    const r=rateFor(line.activity,snap,ovs,t);
-    const out={sy,rate:r.rate,source:r.source,override:r.override||null,row:r.row,why:r.why||null,cost:null};
-    if(sy==null||sy<=0){out.why=line.basis==='polygon'?'No traced polygon area':'No Cartegraph square yards';return out}
-    if(r.rate==null)return out;
-    out.cost=Math.round(sy*r.rate*100)/100;return out}
-  function totals(priced){
-    let total=0,n=0,missing=0;for(const p of priced){if(p.cost==null)missing++;else{total+=p.cost;n++}}
-    return{total:Math.round(total*100)/100,priced:n,unpriced:missing}}
+    if(usable(row))return{rate:row.Rate_Per_SY,source:'Snapshot',override:null,row};
+    return{rate:null,source:null,override:null,row:row||null}}
+  // Treatments offered: snapshot activities with a confirmed rate or an active override, sorted by display name.
+  function treatments(snap,ovs,t){
+    if(!snap)return[];
+    return [...snap.rates.keys()].filter(a=>rateFor(a,snap,ovs,t).rate!=null).sort((x,y)=>label(x).localeCompare(label(y)))}
+  // Square yards for a road: the typed figure when the user edited it, otherwise Cartegraph's calculated SY.
+  function roadSy(road){const e=num(road.syEdit);return e!=null?e:num(road.cgSy)}
+  // Price every road x treatment. roads: [{key, cgSy, syEdit, treatments:[activity]}]
+  function price(roads,snap,ovs,t){
+    let total=0,items=0,missing=0;
+    const out=roads.map(r=>{const sy=roadSy(r);let sub=0;
+      const its=r.treatments.map(a=>{const q=rateFor(a,snap,ovs,t);
+        const cost=(sy!=null&&sy>0&&q.rate!=null)?Math.round(sy*q.rate*100)/100:null;
+        if(cost==null)missing++;else{sub+=cost;items++}
+        return{activity:a,rate:q.rate,source:q.source,override:q.override,row:q.row,cost}});
+      sub=Math.round(sub*100)/100;total+=sub;
+      return{road:r,sy,edited:num(r.syEdit)!=null,items:its,subtotal:sub}});
+    return{roads:out,total:Math.round(total*100)/100,items,missing}}
+  function ociTip(row){if(!row||row.OCI_From==null)return '';
+    return 'Cartegraph protocol triggers this treatment at OCI '+row.OCI_From+'–'+row.OCI_Through+(row.Skip_Years!=null?' (skip '+row.Skip_Years+' yr after)':'')+'. Guidance only.'}
   // Override form check. f: {activity, rate, eff, end, approver, reason}; activities: allowed names.
   function checkOverride(f,activities){
     const e=[];
-    if(!activities.includes(f.activity))e.push('Choose an activity from the snapshot.');
-    const r=num(f.rate);if(r==null||r<=0)e.push('Override rate: a number greater than 0 ($ per SY).');
+    if(!activities.includes(f.activity))e.push('Choose a treatment from the list.');
+    const r=num(f.rate);if(r==null||r<=0)e.push('New rate: a number greater than 0 ($ per SY).');
     const eff=fromInput(f.eff),end=f.end?fromInput(f.end):null;
     if(eff==null)e.push('Effective date is required.');
     if(f.end&&end==null)e.push('End date is not a valid date.');
@@ -254,7 +293,8 @@ const PavRules=(()=>{
     const cell=v=>{let s=v==null?'':String(v);if(/^[=+\-@]/.test(s))s="'"+s;return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
     return rows.map(r=>r.map(cell).join(',')).join('\r\n')+'\r\n'}
   const money=v=>v==null?'':'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  return{num,today,fromInput,ymd,currentSnapshot,usable,activeOverride,rateFor,priceLine,totals,checkOverride,csv,money}
+  const sy=v=>v==null?'—':Math.round(v).toLocaleString('en-US')+' SY';
+  return{num,today,fromInput,ymd,label,currentSnapshot,usable,activeOverride,rateFor,treatments,roadSy,price,ociTip,checkOverride,csv,money,sy}
 })();
 /* RULES-END */
 </script>
@@ -265,6 +305,32 @@ const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 function toast(t,ok=true){const m=$('msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');clearTimeout(m._t);m._t=setTimeout(()=>m.className='msg',ok?4000:12000)}
 function gateFail(t,showBtn){$('gate').style.display='';$('gateMsg').textContent=t;$('gateBtn').style.display=showBtn?'':'none'}
 const R=PavRules;
+
+// ── walk-through guide (no library; the SDK is not needed for it) ──
+const TOUR=[
+  {el:null,t:'Welcome',p:'This tool gives a planning-level cost for pavement treatments on City roads, using the rates Public Works keeps in Cartegraph. It takes about a minute to learn. You can reopen this guide any time with "How it works".'},
+  {el:'sideBox',t:'1. Pick roads',p:'Every City road segment is listed with its area in square yards. Type in "Find a road" to narrow the list, then tick the roads you want. Mix and match freely: roads do not have to be on the same street or in the same year.'},
+  {el:'mapBox',t:'Or pick on the map',p:'Click a road on the map to add it or take it out. Selected roads are highlighted. Click a road name in the list to zoom to it.'},
+  {el:'bulkBox',t:'2. Add treatments',p:'Each selected road becomes a card. Use "Add to all roads" to put the same treatment on every card at once, for example Fog Seal.'},
+  {el:'lines',t:'Several treatments per road',p:'On any card you can add more treatments, such as Rejuvenation on top of Fog Seal, and remove ones you do not need. If you know the square yards differ from Cartegraph, type the real figure; it is marked "edited". Point at a treatment name to see when Cartegraph would normally call for it.'},
+  {el:'totBox',t:'3. Total and export',p:'The total updates as you go. "Export CSV" saves the estimate with the rate and its source for every line, so anyone can see where each number came from. Estimates are advisory; Cartegraph remains the system of record.'},
+  {el:'ratesBtn',t:'Rates',p:'"Rates" lists the price per square yard for each treatment. Price editors can enter a newer rate (an override) with a reason; it is labelled so everyone knows it differs from Cartegraph.'}];
+let tourI=0;
+function tourShow(i){tourI=i;const s=TOUR[i];$('tourVeil').style.display='block';$('tourT').textContent=s.t;$('tourP').textContent=s.p;
+  $('tourN').textContent=(i+1)+' of '+TOUR.length;$('tourBack').disabled=i===0;$('tourNext').textContent=i===TOUR.length-1?'Done':'Next';
+  const hole=$('tourHole'),pop=$('tourPop'),el=s.el&&$(s.el),W=innerWidth,H=innerHeight;
+  if(el){const r=el.getBoundingClientRect(),pad=6;Object.assign(hole.style,{display:'block',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+2*pad)+'px',height:(r.height+2*pad)+'px'});
+    const pw=Math.min(320,W-32);let x=r.right+14,y=r.top;
+    if(x+pw>W-16)x=r.left-pw-14;if(x<16){x=Math.max(16,Math.min(W-pw-16,r.left));y=r.bottom+14;if(y+200>H)y=Math.max(16,r.top-214)}
+    Object.assign(pop.style,{left:x+'px',top:Math.max(16,Math.min(y,H-230))+'px'})}
+  else{Object.assign(hole.style,{display:'block',left:(W/2)+'px',top:(H/2)+'px',width:'0px',height:'0px'});
+    Object.assign(pop.style,{left:Math.max(16,W/2-160)+'px',top:Math.max(16,H/2-110)+'px'})}}
+function tourEnd(){$('tourVeil').style.display='none';try{localStorage.setItem(CONFIG.tourKey,'seen')}catch(e){}}
+$('tourBtn').onclick=()=>tourShow(0);$('tourSkip').onclick=tourEnd;
+$('tourBack').onclick=()=>tourShow(Math.max(0,tourI-1));
+$('tourNext').onclick=()=>tourI>=TOUR.length-1?tourEnd():tourShow(tourI+1);
+addEventListener('resize',()=>{if($('tourVeil').style.display==='block')tourShow(tourI)});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('tourVeil').style.display==='block')tourEnd()});
 
 if(typeof require!=='function'){
   gateFail('Cannot load the ArcGIS Maps SDK from js.arcgis.com. Check the network connection, then reload.',false);
@@ -279,9 +345,9 @@ if(typeof require!=='function'){
   IdM.checkSignInStatus(info.portalUrl+'/sharing').catch(()=>signIn()).then(start).catch(err=>{
     gateFail('Sign-in is needed to use the estimator. '+(err&&err.message?'('+err.message+')':''),true)});
 
-  let view,segLayer,segLV,hl=null,snapTable,ovrRead,ovrEdit=null,canEdit=false,user='',userName='';
-  let segs=new Map(),tasks=[],snap=null,snapRows=[],ovs=[],T=R.today();
-  const est=new Map();  // task key -> {key, task, activity, basis}
+  let view,roadLayer,roadLV,hl=null,snapTable,ovrRead,ovrEdit=null,canEdit=false,user='',userName='';
+  let roads=[],byKey=new Map(),snap=null,ovs=[],T=R.today();
+  const sel=new Map();  // CG_SegmentID -> {key, cgSy, syEdit, treatments:[activity]}
 
   // Find a layer or table by its service name (layer ids in views are not guaranteed).
   async function byName(itemId,name,opts){
@@ -290,140 +356,126 @@ if(typeof require!=='function'){
       try{await fl.load()}catch(e){continue}
       if(fl.sourceJSON&&fl.sourceJSON.name===name)return fl}
     throw new Error(name+' not found in item '+itemId)}
-  const all=async(fl,where,fields,geom=false)=>{
+  async function all(fl,where,fields,geom){
     const out=[];let start=0;const page=1000;
-    for(;;){const r=await fl.queryFeatures({where,outFields:fields,returnGeometry:geom,start,num:page,orderByFields:[fl.objectIdField]});
+    for(;;){const r=await fl.queryFeatures({where,outFields:fields,returnGeometry:!!geom,outSpatialReference:geom?view.spatialReference:undefined,start,num:page,orderByFields:[fl.objectIdField]});
       out.push(...r.features);if(r.features.length<page)break;start+=page;if(start>20000)break}
-    return out};
+    return out}
 
   async function start(){
     const portal=new Portal({url:CONFIG.portalUrl});await portal.load();
     user=portal.user?portal.user.username:'';userName=portal.user?(portal.user.fullName||user):'';
     $('who').textContent=userName||'Signed in';
-    let evLayer;
-    try{
-      segLayer=await byName(CONFIG.plannedItemId,'Segments',{popupEnabled:false,
-        renderer:{type:'simple',symbol:{type:'simple-line',color:[212,154,78,0.9],width:3}}});
-      evLayer=await byName(CONFIG.plannedItemId,'Treatment_Events');
-    }catch(e){gateFail('Cannot open the planned pavement work with this account. It is shared with City staff; ask Ernie. ('+(e.message||e)+')',false);return}
-    try{
-      snapTable=await byName(CONFIG.ratesReadItemId,'Rate_Snapshots');
-      ovrRead=await byName(CONFIG.ratesReadItemId,'Rate_Overrides');
-    }catch(e){gateFail('Cannot open the estimator rates with this account. ('+(e.message||e)+')',false);return}
+    try{roadLayer=await byName(CONFIG.roadsItemId,'Segments',{popupEnabled:false,
+      renderer:{type:'simple',symbol:{type:'simple-line',color:[82,96,117,0.75],width:2}}})}
+    catch(e){gateFail('Cannot open the City road segments. ('+(e.message||e)+')',false);return}
+    try{snapTable=await byName(CONFIG.ratesReadItemId,'Rate_Snapshots');ovrRead=await byName(CONFIG.ratesReadItemId,'Rate_Overrides')}
+    catch(e){gateFail('Cannot open the estimator rates with this account. They are shared with City staff; ask Ernie. ('+(e.message||e)+')',false);return}
     try{ovrEdit=await byName(CONFIG.ratesEditItemId,'Rate_Overrides');
       const ops=(ovrEdit.capabilities&&ovrEdit.capabilities.operations)||{};canEdit=!!ops.supportsAdd&&!!ops.supportsUpdate;
       if(ops.supportsDelete)showWarn('The overrides editing view allows deletes; it should be add + update only. This app never deletes.');
-    }catch(e){ovrEdit=null;canEdit=false}  // not in the editors group: read-only rates
-    const sf=await all(segLayer,'1=1',['CG_SegmentID','Street','Segment_Name','CG_SqYd_Calc','CG_Length_ft','FunctionalClass','PavementClass','Inactive']);
-    sf.forEach(f=>segs.set(f.attributes.CG_SegmentID,f.attributes));
-    const tf=await all(evLayer,"Status = '"+CONFIG.plannedStatus+"'",['EventID','CG_SegmentID','CG_TaskID','Street','TreatmentCategory','WorkTypeRaw','TreatYear','PlannedDate','Polygon_SqYd','Pct_of_Segment']);
-    tasks=tf.map(f=>f.attributes).map(a=>({key:a.EventID||('T'+a.CG_TaskID),seg:segs.get(a.CG_SegmentID)||null,...a}))
-      .sort((a,b)=>(a.TreatYear||0)-(b.TreatYear||0)||String(a.Street).localeCompare(String(b.Street)));
-    await loadRates();
-    view=new MapView({container:'map',map:new EsriMap({basemap:'dark-gray-vector',layers:[segLayer]}),center:CONFIG.center,zoom:CONFIG.zoom,popupEnabled:false,constraints:{snapToZoom:false}});
+    }catch(e){ovrEdit=null;canEdit=false}  // not a price editor: rates are read only
+    view=new MapView({container:'map',map:new EsriMap({basemap:'gray-vector',layers:[roadLayer]}),center:CONFIG.center,zoom:CONFIG.zoom,popupEnabled:false,constraints:{snapToZoom:false}});
     view.ui.add(new BasemapToggle({view,nextBasemap:'hybrid'}),'bottom-right');
-    segLV=await view.whenLayerView(segLayer);
+    await loadRates();
+    const fs=await all(roadLayer,'1=1',[roadLayer.objectIdField,'CG_SegmentID','Street','Segment_Name','FunctionalClass','PavementClass','CG_Length_ft','CG_SqYd_Calc','Last_Treatment','Last_Treatment_Year'],true);
+    roads=fs.map(f=>({...f.attributes,oid:f.attributes[roadLayer.objectIdField],geometry:f.geometry}))
+      .filter(r=>r.CG_SegmentID!=null)
+      .sort((a,b)=>String(a.Street||'').localeCompare(String(b.Street||''))||(b.CG_SqYd_Calc||0)-(a.CG_SqYd_Calc||0));
+    byKey=new Map(roads.map(r=>[String(r.CG_SegmentID),r]));
+    roadLV=await view.whenLayerView(roadLayer);
     view.on('click',onMapClick);
-    fillFilters();renderList();renderEstimate();
+    $('q').oninput=renderList;
+    fillBulk();renderList();render();
     $('gate').style.display='none';
+    let seen=null;try{seen=localStorage.getItem(CONFIG.tourKey)}catch(e){seen='seen'}
+    if(!seen)setTimeout(()=>tourShow(0),400);
   }
   function showWarn(t){const w=$('warnbar');w.textContent='⚠ '+t;w.style.display='block'}
   async function loadRates(){
-    snapRows=(await all(snapTable,'1=1',['*'])).map(f=>f.attributes);
+    const sr=(await all(snapTable,'1=1',['*'])).map(f=>f.attributes);
     ovs=(await all(ovrRead,'1=1',['*'])).map(f=>f.attributes);
-    T=R.today();snap=R.currentSnapshot(snapRows,T);
-    $('snapMeta').innerHTML=snap
-      ?'Rates: Cartegraph snapshot <b>'+esc(snap.id)+'</b> (read '+esc(R.ymd(snap.date))+', in effect from '+esc(R.ymd(snap.eff))+'). '+
-        ovs.filter(o=>R.activeOverride(ovs,o.Activity,T)===o).length+' override(s) in effect.'
-      :'<span style="color:var(--bad)">No rate snapshot is in effect. Lines cannot be priced.</span>';
-    if(!snap)showWarn('No rate snapshot is in effect today. Ask Ernie to check the Rate_Snapshots table.');
+    T=R.today();snap=R.currentSnapshot(sr,T);
+    if(!snap)showWarn('No rate snapshot is in effect today, so nothing can be priced. Ask Ernie to check the rates table.');
   }
+  const offered=()=>R.treatments(snap,ovs,T);
+  function opts(list,ph){return (ph?'<option value="">'+esc(ph)+'</option>':'')+list.map(a=>'<option value="'+esc(a)+'" title="'+esc(R.ociTip(snap&&snap.rates.get(a)))+'">'+esc(R.label(a))+'</option>').join('')}
+  function fillBulk(){$('bulkSel').innerHTML=opts(offered(),'Choose a treatment…')}
 
-  // ── list ────────────────────────────────────────────────
-  function fillFilters(){
-    const yrs=[...new Set(tasks.map(t=>t.TreatYear).filter(v=>v!=null))].sort();
-    $('fYear').innerHTML='<option value="">All years</option>'+yrs.map(y=>'<option>'+y+'</option>').join('');
-    const tr=[...new Set(tasks.map(t=>t.WorkTypeRaw).filter(Boolean))].sort();
-    $('fTreat').innerHTML='<option value="">All treatments</option>'+tr.map(v=>'<option>'+esc(v)+'</option>').join('');
-    ['fYear','fTreat'].forEach(id=>$(id).onchange=renderList);$('fText').oninput=renderList;
-  }
-  function shown(){
-    const y=$('fYear').value,tr=$('fTreat').value,q=$('fText').value.trim().toUpperCase();
-    return tasks.filter(t=>(!y||String(t.TreatYear)===y)&&(!tr||t.WorkTypeRaw===tr)&&
-      (!q||String(t.Street||'').toUpperCase().includes(q)||String(t.seg&&t.seg.Segment_Name||'').toUpperCase().includes(q)||String(t.CG_SegmentID)===q))}
+  // ── road list ───────────────────────────────────────────
+  function shown(){const q=$('q').value.trim().toUpperCase();
+    return q?roads.filter(r=>String(r.Street||'').toUpperCase().includes(q)||String(r.Segment_Name||'').toUpperCase().includes(q)):roads}
   function renderList(){
-    const s=shown();
-    if(!tasks.length){$('list').innerHTML='<div class="empty">No planned work found in the planned view.</div>';return}
-    if(!s.length){$('list').innerHTML='<div class="empty">No planned tasks match.</div>';return}
-    let h='',yr=null;
-    for(const t of s){if(t.TreatYear!==yr){yr=t.TreatYear;h+='<div class="grp">'+esc(yr==null?'Year not set':yr)+'</div>'}
-      const on=est.has(t.key);
-      h+='<label class="row'+(on?' sel':'')+'"><input type="checkbox" data-k="'+esc(t.key)+'"'+(on?' checked':'')+'><div><div class="st">'+esc(t.Street||'(no street)')+
-        ' <span class="nm">seg '+esc(t.CG_SegmentID)+'</span></div><div class="nm">'+esc(t.WorkTypeRaw||t.TreatmentCategory||'—')+
-        (t.seg&&t.seg.CG_SqYd_Calc!=null?' · '+Math.round(t.seg.CG_SqYd_Calc).toLocaleString()+' SY':'')+'</div></div></label>'}
-    $('list').innerHTML=h;
+    const s=shown();const cap=400,list=s.slice(0,cap);
+    $('cnt').textContent=s.length+' road'+(s.length===1?'':'s')+(sel.size?' · '+sel.size+' selected':'');
+    if(!s.length){$('list').innerHTML='<div class="empty">No roads match.</div>';return}
+    $('list').innerHTML=list.map(r=>{const k=String(r.CG_SegmentID),on=sel.has(k);
+      return '<label class="row'+(on?' sel':'')+'" title="'+esc(r.Segment_Name||'')+'"><input type="checkbox" data-k="'+esc(k)+'"'+(on?' checked':'')+'><span class="nm" data-z="'+esc(k)+'">'+esc(r.Street||r.Segment_Name||'(unnamed)')+'</span><span class="sy">'+esc(R.sy(r.CG_SqYd_Calc))+'</span></label>'}).join('')+
+      (s.length>cap?'<div class="empty">'+(s.length-cap)+' more. Type in "Find a road" to narrow the list.</div>':'');
     $('list').querySelectorAll('input[data-k]').forEach(c=>c.onchange=()=>toggle(c.dataset.k,c.checked));
+    $('list').querySelectorAll('[data-z]').forEach(n=>n.onclick=e=>{e.preventDefault();zoomTo(n.dataset.z)});
   }
-  const taskBy=k=>tasks.find(t=>t.key===k);
-  function toggle(k,on){const t=taskBy(k);if(!t)return;
-    if(on&&!est.has(k))est.set(k,{key:k,task:t,activity:t.WorkTypeRaw||'',basis:'cartegraph'});
-    if(!on)est.delete(k);renderList();renderEstimate()}
-  $('addShown').onclick=()=>{shown().forEach(t=>{if(!est.has(t.key))est.set(t.key,{key:t.key,task:t,activity:t.WorkTypeRaw||'',basis:'cartegraph'})});renderList();renderEstimate()};
-  $('clearSel').onclick=()=>{if(est.size&&!confirm('Clear all '+est.size+' line(s) from the estimate?'))return;est.clear();renderList();renderEstimate()};
+  function zoomTo(k){const r=byKey.get(k);if(r&&r.geometry&&view)view.goTo(r.geometry.extent?r.geometry.extent.clone().expand(2):r.geometry).catch(()=>{})}
+  function toggle(k,on){const r=byKey.get(k);if(!r)return;
+    if(on&&!sel.has(k))sel.set(k,{key:k,cgSy:r.CG_SqYd_Calc,syEdit:null,treatments:[]});
+    if(!on)sel.delete(k);renderList();render()}
+  $('clearSel').onclick=e=>{e.preventDefault();if(sel.size&&!confirm('Clear all '+sel.size+' road(s) from the estimate?'))return;sel.clear();renderList();render()};
   async function onMapClick(ev){
-    const h=await view.hitTest(ev,{include:[segLayer]});const g=h.results.find(r=>r.graphic&&r.graphic.layer===segLayer);
-    if(!g)return;let id=g.graphic.attributes.CG_SegmentID;
-    if(id==null){try{const r=await segLayer.queryFeatures({objectIds:[g.graphic.attributes[segLayer.objectIdField]],outFields:['CG_SegmentID']});id=r.features[0]&&r.features[0].attributes.CG_SegmentID}catch(e){}}
-    const ts=tasks.filter(t=>t.CG_SegmentID===id);
-    if(!ts.length){toast('No planned tasks on segment '+id+'.',false);return}
-    const allIn=ts.every(t=>est.has(t.key));ts.forEach(t=>toggle(t.key,!allIn));
-  }
+    const h=await view.hitTest(ev,{include:[roadLayer]});const g=h.results.find(x=>x.graphic&&x.graphic.layer===roadLayer);
+    if(!g)return;const oid=g.graphic.attributes[roadLayer.objectIdField];const r=roads.find(x=>x.oid===oid);
+    if(r){const k=String(r.CG_SegmentID);toggle(k,!sel.has(k))}}
 
   // ── estimate ────────────────────────────────────────────
-  const activities=()=>snap?[...snap.rates.keys()].sort():[];
-  function guidance(row){if(!row||row.OCI_From==null)return '';
-    return 'Protocol trigger OCI '+row.OCI_From+'–'+row.OCI_Through+(row.Skip_Years!=null?', skip '+row.Skip_Years+' yr':'')+' (guidance only)'}
-  function priced(){return [...est.values()].map(l=>({l,p:R.priceLine({activity:l.activity,basis:l.basis,cgSqYd:l.task.seg&&l.task.seg.CG_SqYd_Calc,polySqYd:l.task.Polygon_SqYd},snap,ovs,T)}))}
-  function renderEstimate(){
-    const rows=priced();
-    if(!rows.length){$('lines').innerHTML='<div class="empty">Tick planned tasks in the list, or click segments on the map.</div>'}
-    else $('lines').innerHTML=rows.map(({l,p})=>{
-      const t=l.task,acts=activities();const opts=[...new Set([l.activity,...acts])].filter(Boolean);
-      const tag=p.source==='Override'?'<span class="tag ovr" title="'+esc('Override by '+p.override.Approver+': '+p.override.Reason)+'">override</span>'
-        :p.source==='Snapshot'?'<span class="tag snap">snapshot</span>':'<span class="tag na">unavailable</span>';
-      const hasPoly=R.num(t.Polygon_SqYd)!=null;
-      return '<div class="ln" data-k="'+esc(l.key)+'"><div class="t"><b>'+esc(t.Street||'(no street)')+'</b><span class="nm" style="color:var(--dim);font-size:11px">seg '+esc(t.CG_SegmentID)+(t.TreatYear?' · '+t.TreatYear:'')+'</span><button class="x" data-rm="'+esc(l.key)+'" title="Remove line">×</button></div>'+
-        '<div class="s">'+esc(t.seg?t.seg.Segment_Name||'':'Segment not found in the planned view')+(t.CG_TaskID?' · Cartegraph task '+esc(t.CG_TaskID):'')+(l.activity!==t.WorkTypeRaw?' · planned as '+esc(t.WorkTypeRaw):'')+'</div>'+
-        '<div class="g"><select data-act="'+esc(l.key)+'" title="Treatment (Cartegraph activity)">'+opts.map(a=>'<option'+(a===l.activity?' selected':'')+'>'+esc(a)+'</option>').join('')+'</select>'+
-        '<select data-basis="'+esc(l.key)+'" title="Area basis: Cartegraph calculated square yards (default) or the traced polygon area (whole polygon)"><option value="cartegraph"'+(l.basis==='cartegraph'?' selected':'')+'>Cartegraph SY</option>'+
-        (hasPoly?'<option value="polygon"'+(l.basis==='polygon'?' selected':'')+'>Traced polygon SY</option>':'')+'</select></div>'+
-        '<div class="p"><span>'+(p.sy!=null?Math.round(p.sy).toLocaleString()+' SY':'— SY')+' × '+(p.rate!=null?R.money(p.rate)+'/SY':'—')+' '+tag+'</span><span class="c">'+(p.cost!=null?R.money(p.cost):'—')+'</span></div>'+
-        (p.why&&p.cost==null?'<div class="gd" style="color:var(--bad)">'+esc(p.why)+'. Left out of the total.</div>':'')+
-        (guidance(p.row)?'<div class="gd">'+esc(guidance(p.row))+'</div>':'')+'</div>'}).join('');
+  $('bulkBtn').onclick=()=>{const a=$('bulkSel').value;if(!a){toast('Choose a treatment first.',false);return}
+    if(!sel.size){toast('Select roads first.',false);return}
+    let n=0;sel.forEach(s=>{if(!s.treatments.includes(a)){s.treatments.push(a);n++}});render();
+    toast(R.label(a)+' added to '+n+' road'+(n===1?'':'s')+'.')};
+  function render(){
+    const P=R.price([...sel.values()],snap,ovs,T),list=offered();
+    $('estTitle').textContent=sel.size?sel.size+' road'+(sel.size===1?'':'s')+' selected':'No roads selected';
+    if(!sel.size)$('lines').innerHTML='<div class="empty">Tick roads in the list, or click them on the map. Then add one or more treatments to each road.</div>';
+    else $('lines').innerHTML=P.roads.map(x=>{const s=x.road,r=byKey.get(s.key);
+      const avail=list.filter(a=>!s.treatments.includes(a));
+      return '<div class="card" data-k="'+esc(s.key)+'"><div class="t"><b>'+esc(r.Street||r.Segment_Name)+'</b><button class="x" data-rm="'+esc(s.key)+'" title="Remove road">×</button></div>'+
+        '<div class="syr">Area <input type="text" inputmode="decimal" data-sy="'+esc(s.key)+'" value="'+esc(x.sy==null?'':Math.round(x.sy*100)/100)+'" title="Square yards"> SY '+
+          (x.edited?'<span class="ed">edited</span><button class="rst" data-rs="'+esc(s.key)+'">use Cartegraph ('+esc(R.sy(r.CG_SqYd_Calc))+')</button>':'')+'</div>'+
+        x.items.map(it=>'<div class="tr"><div class="n"><span title="'+esc(R.ociTip(it.row)||'No Cartegraph trigger range for this treatment.')+'">'+esc(R.label(it.activity))+'</span>'+
+          (it.source==='Override'?'<span class="tag" title="'+esc('Override by '+it.override.Approver+': '+it.override.Reason)+'">override</span>':'')+'</div>'+
+          '<div class="m">'+(it.rate!=null?R.money(it.rate)+'/SY':'no rate')+'</div><div class="c">'+(it.cost!=null?R.money(it.cost):'—')+'</div>'+
+          '<button class="x" data-rt="'+esc(s.key)+'|'+esc(it.activity)+'" title="Remove treatment">×</button></div>').join('')+
+        '<div class="addt"><select data-add="'+esc(s.key)+'">'+opts(avail,x.items.length?'Add another treatment…':'Add a treatment…')+'</select></div>'+
+        (x.items.length?'<div class="sub"><span>Road subtotal</span><b>'+R.money(x.subtotal)+'</b></div>':'')+
+        '<details class="meta"><summary>Road details</summary><div>Cartegraph segment '+esc(r.CG_SegmentID)+' · '+esc(r.Segment_Name||'')+'<br>'+
+          esc([r.FunctionalClass,r.PavementClass].filter(Boolean).join(' · '))+(r.CG_Length_ft!=null?' · '+Math.round(r.CG_Length_ft).toLocaleString()+' ft':'')+
+          (r.Last_Treatment?'<br>Last treatment: '+esc(r.Last_Treatment)+(r.Last_Treatment_Year?' ('+esc(r.Last_Treatment_Year)+')':''):'')+'</div></details></div>'}).join('');
     $('lines').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>toggle(b.dataset.rm,false));
-    $('lines').querySelectorAll('[data-act]').forEach(s=>s.onchange=()=>{est.get(s.dataset.act).activity=s.value;renderEstimate()});
-    $('lines').querySelectorAll('[data-basis]').forEach(s=>s.onchange=()=>{est.get(s.dataset.basis).basis=s.value;renderEstimate()});
-    const tt=R.totals(rows.map(r=>r.p));
-    $('total').textContent=R.money(tt.total)||'$0';
-    $('totNote').textContent=(rows.length?tt.priced+' of '+rows.length+' line(s) priced'+(tt.unpriced?'; '+tt.unpriced+' unpriced line(s) left out of the total':'')+'. ':'')+'Advisory estimate. Cartegraph is the system of record.';
-    $('exportBtn').disabled=!rows.length;
+    $('lines').querySelectorAll('[data-rt]').forEach(b=>b.onclick=()=>{const [k,a]=b.dataset.rt.split('|');const s=sel.get(k);s.treatments=s.treatments.filter(x=>x!==a);render()});
+    $('lines').querySelectorAll('[data-add]').forEach(s=>s.onchange=()=>{if(!s.value)return;sel.get(s.dataset.add).treatments.push(s.value);render()});
+    $('lines').querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{sel.get(b.dataset.rs).syEdit=null;render()});
+    $('lines').querySelectorAll('[data-sy]').forEach(i=>i.onchange=()=>{const s=sel.get(i.dataset.sy),r=byKey.get(i.dataset.sy),v=R.num(i.value);
+      if(i.value.trim()===''||(v!=null&&r.CG_SqYd_Calc!=null&&Math.abs(v-r.CG_SqYd_Calc)<0.005))s.syEdit=null;
+      else if(v==null||v<=0){toast('Square yards must be a number greater than 0.',false)}
+      else s.syEdit=v;render()});
+    $('total').textContent=R.money(P.total);
+    const nT=P.items+P.missing;
+    $('totNote').textContent=(sel.size?sel.size+' road(s), '+nT+' treatment line(s)'+(P.missing?'; '+P.missing+' without an area or rate left out':'')+'. ':'')+'Advisory estimate. Cartegraph is the system of record.';
+    $('exportBtn').disabled=!P.items;
     if(hl){hl.remove();hl=null}
-    if(segLV&&est.size){const ids=[...new Set([...est.values()].map(l=>l.task.CG_SegmentID))];
-      segLayer.queryObjectIds({where:'CG_SegmentID IN ('+ids.map(i=>"'"+String(i).replace(/'/g,"''")+"'").join(',')+')'}).then(o=>{if(hl)hl.remove();hl=segLV.highlight(o)}).catch(()=>{})}
+    if(roadLV&&sel.size)hl=roadLV.highlight([...sel.keys()].map(k=>byKey.get(k).oid));
   }
   $('exportBtn').onclick=()=>{
-    const rows=priced();if(!rows.length)return;const tt=R.totals(rows.map(r=>r.p));const now=new Date();
+    const P=R.price([...sel.values()],snap,ovs,T);if(!P.items)return;const now=new Date();
     const out=[['City of Fair Oaks Ranch - Pavement Estimator (advisory estimate; Cartegraph is the system of record)'],
       ['Generated',now.toLocaleString(),'By',userName+' ('+user+')'],
-      ['Rate snapshot',snap?snap.id:'none in effect','Snapshot read',snap?R.ymd(snap.date):'','In effect from',snap?R.ymd(snap.eff):''],[],
-      ['Planned year','Street','Segment name','Cartegraph segment ID','Cartegraph task ID','Planned activity','Estimated activity','Area basis','Sq Yd','Rate $/SY','Rate source','Snapshot ID','Snapshot rate $/SY','Override OBJECTID','Override approver','Override reason','Override effective','Cost $','Note']];
-    for(const {l,p} of rows){const t=l.task,o=p.override;
-      out.push([t.TreatYear,t.Street,t.seg&&t.seg.Segment_Name,t.CG_SegmentID,t.CG_TaskID,t.WorkTypeRaw,l.activity,
-        l.basis==='polygon'?'Traced polygon (whole polygon)':'Cartegraph calculated',p.sy==null?'':Math.round(p.sy*100)/100,
-        p.rate==null?'':p.rate,p.source||'unavailable',snap?snap.id:'',p.row&&p.row.Rate_Per_SY!=null?p.row.Rate_Per_SY:'',
-        o?o.OBJECTID:'',o?o.Approver:'',o?o.Reason:'',o?R.ymd(o.Effective_Date):'',p.cost==null?'':p.cost,p.cost==null?(p.why||'')+' - left out of the total':''])}
-    out.push([],['Total (priced lines)','','','','','','','','','','','','','','','','',tt.total,tt.unpriced?tt.unpriced+' unpriced line(s) left out':'']);
-    const p2=x=>String(x).padStart(2,'0');
+      ['Rate snapshot',snap?snap.id:'none in effect','Read from Cartegraph',snap?R.ymd(snap.date):''],[],
+      ['Street','Segment name','Cartegraph segment ID','Sq Yd','Area source','Cartegraph SY','Treatment (Cartegraph activity)','Rate $/SY','Rate source','Snapshot ID','Snapshot rate $/SY','Override OBJECTID','Override approver','Override reason','Override effective','Cost $','Road subtotal $']];
+    for(const x of P.roads){const r=byKey.get(x.road.key);
+      x.items.forEach((it,i)=>{const o=it.override;
+        out.push([r.Street,r.Segment_Name,r.CG_SegmentID,x.sy==null?'':Math.round(x.sy*100)/100,x.edited?'Edited by user':'Cartegraph calculated',r.CG_SqYd_Calc==null?'':Math.round(r.CG_SqYd_Calc*100)/100,
+          it.activity,it.rate==null?'':it.rate,it.source||'no rate',snap?snap.id:'',it.row&&it.row.Rate_Per_SY!=null?it.row.Rate_Per_SY:'',
+          o?o.OBJECTID:'',o?o.Approver:'',o?o.Reason:'',o?R.ymd(o.Effective_Date):'',it.cost==null?'':it.cost,i===x.items.length-1?x.subtotal:''])})}
+    out.push([],['Total','','','','','','','','','','','','','','',P.total]);
+    const p2=v=>String(v).padStart(2,'0');
     const name='PavementEstimate_'+now.getFullYear()+p2(now.getMonth()+1)+p2(now.getDate())+'-'+p2(now.getHours())+p2(now.getMinutes())+p2(now.getSeconds())+'.csv';
     const url=URL.createObjectURL(new Blob([R.csv(out)],{type:'text/csv'}));
     const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
@@ -433,48 +485,44 @@ if(typeof require!=='function'){
   $('ratesBtn').onclick=()=>{renderRates();$('rates').style.display='flex'};
   $('ratesClose').onclick=()=>{$('rates').style.display='none'};
   function renderRates(){
-    $('ratesMeta').innerHTML=(snap?'Snapshot <b>'+esc(snap.id)+'</b>, read '+esc(R.ymd(snap.date))+' from Cartegraph (maintained by Legacy). ':'No snapshot in effect. ')+
-      (canEdit?'You are a price editor: you can add or retire overrides.':'Read only. Overrides are added by the "'+esc(CONFIG.editorsGroup)+'" group.');
-    const acts=activities();
-    let h='<table><tr><th>Activity</th><th>Source</th><th class="n">Snapshot $/SY</th><th>Status</th><th>In effect</th><th>OCI guidance</th></tr>';
-    for(const a of acts){const row=snap.rates.get(a),o=R.activeOverride(ovs,a,T);
-      h+='<tr><td>'+esc(a)+'<div style="color:var(--dim);font-size:11px">'+esc(row.Notes||'')+'</div></td><td>'+esc(row.Source_Name||row.Source_Type||'')+'</td><td class="n">'+(row.Rate_Per_SY!=null?R.money(row.Rate_Per_SY):'—')+'</td><td>'+esc(row.Rate_Status||'')+'</td><td>'+
-        (o?'<span class="tag ovr">override</span> '+R.money(o.Override_Rate_Per_SY)+'<div style="color:var(--dim);font-size:11px">'+esc(o.Approver)+', from '+esc(R.ymd(o.Effective_Date))+': '+esc(o.Reason)+'</div>':R.usable(row)?'<span class="tag snap">snapshot</span>':'<span class="tag na">unavailable</span>')+'</td><td>'+esc(guidance(row).replace(' (guidance only)',''))+'</td></tr>'}
+    $('ratesMeta').textContent=(snap?'Price per square yard from Cartegraph (read '+R.ymd(snap.date)+'). ':'No rates in effect. ')+
+      (canEdit?'You can change a rate below.':'Rate changes are made by the '+CONFIG.editorsGroup+' group.')+' Point at a treatment to see when Cartegraph calls for it.';
+    const list=offered();
+    let h='<table><tr><th>Treatment</th><th style="text-align:right">$ per SY</th><th></th></tr>';
+    for(const a of list){const q=R.rateFor(a,snap,ovs,T);
+      h+='<tr><td><span class="tip" title="'+esc(R.ociTip(q.row)||'No Cartegraph trigger range for this treatment.')+'">'+esc(R.label(a))+'</span></td><td class="r">'+R.money(q.rate)+'</td><td>'+
+        (q.source==='Override'?'<span class="tag">override</span><div class="w">'+esc(q.override.Approver)+', '+esc(R.ymd(q.override.Effective_Date))+': '+esc(q.override.Reason)+
+          (canEdit?' <button class="btn sm" data-retire="'+q.override.OBJECTID+'">Retire</button>':'')+'</div>':'')+'</td></tr>'}
     h+='</table>';
-    const list=ovs.slice().sort((a,b)=>(b.Effective_Date||0)-(a.Effective_Date||0));
-    h+='<h2 style="font-size:15px;margin-top:12px">Override history</h2>'+(list.length?'<table><tr><th>Activity</th><th class="n">$/SY</th><th>Effective</th><th>End</th><th>Status</th><th>Approver / reason</th><th></th></tr>'+
-      list.map(o=>'<tr><td>'+esc(o.Activity)+'</td><td class="n">'+R.money(o.Override_Rate_Per_SY)+'</td><td>'+esc(R.ymd(o.Effective_Date))+'</td><td>'+esc(R.ymd(o.End_Date))+'</td><td>'+esc(o.Status)+'</td><td>'+esc(o.Approver)+': '+esc(o.Reason)+
-        (o.Editor?'<div style="color:var(--dim);font-size:11px">last edit '+esc(o.Editor)+'</div>':'')+'</td><td>'+(canEdit&&o.Status==='Active'?'<button class="btn sm" data-retire="'+o.OBJECTID+'">Retire</button>':'')+'</td></tr>').join('')+'</table>':'<div class="hint">No overrides yet.</div>');
-    $('ratesTable').innerHTML=h;
+    $('ratesTable').innerHTML=list.length?h:'<div class="hint">No rates are available.</div>';
     $('ratesTable').querySelectorAll('[data-retire]').forEach(b=>b.onclick=()=>retire(+b.dataset.retire));
     $('ovrForm').style.display=canEdit&&snap?'':'none';
-    if(canEdit&&snap){$('oAct').innerHTML=acts.map(a=>'<option>'+esc(a)+'</option>').join('');
+    if(canEdit&&snap){$('oAct').innerHTML=[...snap.rates.keys()].sort((x,y)=>R.label(x).localeCompare(R.label(y))).map(a=>'<option value="'+esc(a)+'">'+esc(R.label(a))+'</option>').join('');
       if(!$('oEff').value)$('oEff').value=R.ymd(T);if(!$('oAppr').value)$('oAppr').value=userName}
   }
   $('oSave').onclick=async()=>{
     const f={activity:$('oAct').value,rate:$('oRate').value,eff:$('oEff').value,end:$('oEnd').value,approver:$('oAppr').value,reason:$('oWhy').value};
-    const c=R.checkOverride(f,activities());
+    const c=R.checkOverride(f,[...snap.rates.keys()]);
     if(c.errors.length){$('oErr').innerHTML=c.errors.map(esc).join('<br>');$('oErr').style.display='block';return}
     $('oErr').style.display='none';
-    const row=snap.rates.get(f.activity);
-    const v=c.value;const base=row&&row.Rate_Per_SY!=null?row.Rate_Per_SY:null;
-    if(!confirm('Save override for '+f.activity+': '+R.money(v.rate)+'/SY from '+R.ymd(v.eff)+(base!=null?' (snapshot '+R.money(base)+'/SY)':'')+'?'))return;
+    const row=snap.rates.get(f.activity),v=c.value,base=row&&row.Rate_Per_SY!=null?row.Rate_Per_SY:null;
+    if(!confirm('Save override for '+R.label(f.activity)+': '+R.money(v.rate)+'/SY from '+R.ymd(v.eff)+(base!=null?' (Cartegraph '+R.money(base)+'/SY)':'')+'?'))return;
     $('oSave').disabled=true;
     try{
       const r=await ovrEdit.applyEdits({addFeatures:[{attributes:{Activity:f.activity,Base_Snapshot_ID:snap.id,Base_Rate_Per_SY:base,
         Override_Rate_Per_SY:v.rate,Effective_Date:v.eff,End_Date:v.end,Approver:v.approver,Reason:v.reason,Status:'Active'}}]});
       const res=(r.addFeatureResults||[])[0];if(!res||res.error)throw new Error(res&&res.error?res.error.message:'no result');
       ['oRate','oEnd','oWhy'].forEach(id=>$(id).value='');
-      await loadRates();renderRates();renderEstimate();toast('Override saved for '+f.activity+'.');
+      await loadRates();fillBulk();renderRates();render();toast('Override saved for '+R.label(f.activity)+'.');
     }catch(e){toast('Override not saved: '+(e.message||e),false)}
     finally{$('oSave').disabled=false}
   };
   async function retire(oid){
     const o=ovs.find(x=>x.OBJECTID===oid);if(!o)return;
-    if(!confirm('Retire the override for '+o.Activity+' ('+R.money(o.Override_Rate_Per_SY)+'/SY)? It stays in the history; the snapshot rate applies again from today.'))return;
+    if(!confirm('Retire the override for '+R.label(o.Activity)+' ('+R.money(o.Override_Rate_Per_SY)+'/SY)? It stays on record; the Cartegraph rate applies again from today.'))return;
     try{const r=await ovrEdit.applyEdits({updateFeatures:[{attributes:{[ovrEdit.objectIdField]:oid,Status:'Retired',End_Date:T}}]});
       const res=(r.updateFeatureResults||[])[0];if(!res||res.error)throw new Error(res&&res.error?res.error.message:'no result');
-      await loadRates();renderRates();renderEstimate();toast('Override retired.')}
+      await loadRates();fillBulk();renderRates();render();toast('Override retired.')}
     catch(e){toast('Not retired: '+(e.message||e),false)}
   }
 });
