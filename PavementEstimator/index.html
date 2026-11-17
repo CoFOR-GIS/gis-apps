@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pavement Estimator | City of Fair Oaks Ranch</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
+<!--
+  CoFOR Pavement Estimator  (CoFOR-GIS/gis-apps/PavementEstimator)  -  WO-0016, D-060, Ref PAVEST-APP-20261117
+  STAFF ONLY. Served over HTTPS from GitHub Pages: https://cofor-gis.github.io/gis-apps/PavementEstimator/
+  (rule R1: ArcGIS sign-in apps need an https redirect URI; gis.local carries only a link/redirect, installed by ChatGPT.)
+  Access is enforced by ArcGIS Online sharing, not by this code:
+   - planned work: "Pavement Treatment Planned (Internal)" view (private / staff)
+   - rates: "Pavement Estimator Rates (Internal View)", Query only, shared with the Organization
+   - overrides: "Pavement Estimator Rates (Internal Editing)", add + update only, group "Pavement Estimator Editors"
+  This repo is public: never put data, credentials or tokens in this file.
+
+  Rules (approved handoff APPROVED_20261117.md, D-060):
+   - Rates come from the current annual Cartegraph snapshot (Rate_Snapshots). Only Rate_Status = Confirmed is used;
+     anything else shows as unavailable and is left out of the total.
+   - Overrides are kept separately (Rate_Overrides). An Active override in its date range replaces the snapshot rate and
+     is shown as an override. Overrides need a rate, effective date, approver and reason. They are never deleted:
+     retiring sets Status = Retired and End_Date = today.
+   - Area: Cartegraph calculated square yards is the labelled default; the traced polygon area is an explicit
+     alternative where the task has one (whole polygon).
+   - The protocol's OCI trigger range is shown as guidance, not as a rule. Estimates are advisory.
+   - Every export records the snapshot, the rate source and any override used, line by line.
+  Sign-in: redirect OAuth, app ID DhZk7VoirUPP4Sa2.
+-->
+<style>
+:root{--ink:#1F1E1A;--ink2:#2a2924;--ink3:#34322c;--line:#47443b;--accent:#D49A4E;--accent2:#e8b779;--text:#f2eee6;--dim:#b5ad9e;--ok:#7fb069;--warn:#e0a83a;--bad:#e05d4f;--ovr:#4fc3d4;--r:8px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--ink);color:var(--text);font-family:Manrope,system-ui,sans-serif;font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+h1,h2,h3{font-family:'Bricolage Grotesque',Manrope,sans-serif;font-weight:700}
+button,input,select,textarea{font-family:inherit;font-size:13px}
+.hdr{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--ink2);border-bottom:2px solid var(--accent);flex-shrink:0}
+.hdr img{height:38px;width:auto}
+.hdr h1{font-size:18px;line-height:1.1}
+.hdr .sub{font-size:11px;color:var(--dim)}
+.hdr .sp{flex:1}
+.hdr .who{font-size:12px;color:var(--dim);text-align:right}
+.hdr a{color:var(--accent2);text-decoration:none}
+.btn{background:var(--ink3);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:#1F1E1A;border-color:var(--accent)}
+.btn.pri:hover{background:var(--accent2)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.warnbar{background:rgba(224,168,58,.15);border-bottom:1px solid var(--warn);color:var(--warn);padding:6px 16px;font-size:12px;display:none;flex-shrink:0}
+.app{flex:1;display:flex;min-height:0}
+.side{width:300px;flex-shrink:0;background:var(--ink2);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side .top{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--line)}
+.side .top input{grid-column:1 / -1}
+.side select,.side input,.panel select,.modal input,.modal select,.modal textarea{width:100%;min-width:0;background:var(--ink);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:6px 8px}
+.side .acts{padding:8px 12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
+.list{overflow:auto;flex:1;padding:4px 8px 16px}
+.grp{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin:12px 4px 4px}
+.row{display:flex;gap:8px;align-items:flex-start;border:1px solid transparent;border-radius:6px;padding:5px 6px;cursor:pointer}
+.row:hover{background:var(--ink3)}
+.row.sel{background:var(--ink3);border-color:var(--accent)}
+.row input[type=checkbox]{width:auto;flex:none;margin-top:2px;accent-color:var(--accent)}
+.row .st{font-size:12px}
+.row .nm{font-size:11px;color:var(--dim)}
+.mapwrap{flex:1;position:relative;min-width:0}
+#map{position:absolute;inset:0}
+.legend{position:absolute;left:12px;bottom:26px;background:rgba(31,30,26,.92);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;font-size:11px;color:var(--dim);line-height:1.6;z-index:5;max-width:250px}
+.panel{width:470px;flex-shrink:0;background:var(--ink2);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.panel .ph{padding:12px 16px;border-bottom:1px solid var(--line)}
+.panel .ph h2{font-size:17px}
+.panel .ph .meta{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.5}
+.lines{flex:1;overflow:auto;padding:8px 12px}
+.ln{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;margin-bottom:8px;background:var(--ink)}
+.ln .t{display:flex;gap:8px;align-items:flex-start}
+.ln .t b{font-size:13px}
+.ln .t .x{margin-left:auto;background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;line-height:1}
+.ln .s{font-size:11px;color:var(--dim);margin:2px 0 6px}
+.ln .g{display:grid;grid-template-columns:1.4fr 1fr;gap:6px}
+.ln .p{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:12px;gap:8px}
+.ln .p .c{font-weight:700;font-size:14px}
+.ln .gd{font-size:11px;color:var(--dim);margin-top:4px}
+.tag{display:inline-block;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.tag.snap{background:rgba(127,176,105,.18);color:var(--ok)}
+.tag.ovr{background:rgba(79,195,212,.18);color:var(--ovr)}
+.tag.na{background:rgba(224,93,79,.18);color:var(--bad)}
+.tot{border-top:2px solid var(--accent);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tot .sum{font-size:20px;font-weight:700;font-family:'Bricolage Grotesque',Manrope,sans-serif}
+.tot .note{font-size:11px;color:var(--dim);flex-basis:100%}
+.empty{color:var(--dim);padding:16px 6px;line-height:1.6}
+.msg{position:fixed;right:16px;bottom:16px;max-width:400px;padding:10px 14px;border-radius:var(--r);font-weight:600;z-index:90;display:none;box-shadow:0 6px 20px rgba(0,0,0,.45);white-space:pre-line}
+.msg.ok{background:var(--ok);color:#111;display:block}.msg.err{background:var(--bad);color:#fff;display:block}
+.gate,.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px}
+.gate{background:var(--ink);z-index:100;text-align:center}
+.gate .box{max-width:460px}
+.gate h2{margin:12px 0 6px}.gate p{color:var(--dim);line-height:1.6;margin-bottom:14px}
+.modal{background:rgba(0,0,0,.6);z-index:80;display:none}
+.modal .box{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);max-width:860px;width:100%;max-height:88vh;overflow:auto;padding:16px}
+.modal h2{font-size:17px;margin-bottom:6px}
+.modal .hint{font-size:11px;color:var(--dim);line-height:1.5;margin-bottom:8px}
+.modal table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+.modal th,.modal td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.modal th{color:var(--dim);font-weight:600}
+.modal td.n{text-align:right;white-space:nowrap}
+.frm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.frm label{font-size:11px;color:var(--dim);display:block;margin-bottom:3px}
+.frm .w{grid-column:1 / -1}
+.errbox{display:none;background:rgba(224,93,79,.12);border:1px solid var(--bad);border-radius:6px;padding:8px 10px;margin-top:8px;font-size:12px;line-height:1.5}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:1000px){
+  .app{flex-direction:column;overflow:auto}
+  .side{width:100%;max-height:38vh;border-right:none;border-bottom:1px solid var(--line)}
+  .mapwrap{min-height:40vh;flex:none;height:40vh}
+  .panel{width:100%;border-left:none;min-height:60vh}
+  .hdr .sub{display:none}
+  .frm{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="gate" id="gate"><div class="box">
+  <img src="logo.svg" alt="City of Fair Oaks Ranch" style="height:64px">
+  <h2>Pavement Estimator</h2>
+  <p id="gateMsg">Signing in to ArcGIS Online&#x2026;</p>
+  <button class="btn pri" id="gateBtn" style="display:none">Sign in</button>
+</div></div>
+
+<div class="hdr">
+  <img src="logo.svg" alt="City of Fair Oaks Ranch">
+  <div><h1>Pavement Estimator</h1><div class="sub">City of Fair Oaks Ranch &#xb7; Public Works &#xb7; staff cost estimates (advisory)</div></div>
+  <div class="sp"></div>
+  <button class="btn" id="ratesBtn">Rates</button>
+  <div class="who"><div id="who">&#x2014;</div><a href="#" id="signOut">Sign out</a></div>
+</div>
+<div class="warnbar" id="warnbar"></div>
+
+<div class="app">
+  <div class="side">
+    <div class="top">
+      <select id="fYear" title="Planned year"></select>
+      <select id="fTreat" title="Planned treatment"></select>
+      <input id="fText" type="search" placeholder="Street or segment" autocomplete="off">
+    </div>
+    <div class="acts"><button class="btn sm" id="addShown">Add all shown</button><button class="btn sm" id="clearSel">Clear estimate</button></div>
+    <div class="list" id="list"><div class="empty">Loading planned work&#x2026;</div></div>
+  </div>
+  <div class="mapwrap">
+    <div id="map"></div>
+    <div class="legend">Segments with planned work. Click a segment to add or remove its planned tasks.</div>
+  </div>
+  <div class="panel">
+    <div class="ph"><h2>Estimate</h2><div class="meta" id="snapMeta">&#x2014;</div></div>
+    <div class="lines" id="lines"><div class="empty">Tick planned tasks in the list, or click segments on the map.</div></div>
+    <div class="tot">
+      <div><div class="note" style="flex-basis:auto">Total (priced lines)</div><div class="sum" id="total">$0</div></div>
+      <div class="sp" style="flex:1"></div>
+      <button class="btn pri" id="exportBtn" disabled>Export CSV</button>
+      <div class="note" id="totNote">Advisory estimate. Cartegraph is the system of record.</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="rates"><div class="box">
+  <div style="display:flex;align-items:center;gap:8px"><h2>Rates</h2><div style="flex:1"></div><button class="btn" id="ratesClose">Close</button></div>
+  <div class="hint" id="ratesMeta"></div>
+  <div id="ratesTable"></div>
+  <div id="ovrForm" style="display:none">
+    <div class="frm">
+      <div class="w"><b>Add an override</b> <span class="hint">Replaces the snapshot rate for one activity from the effective date. Kept separate from the snapshot; never deleted.</span></div>
+      <div><label for="oAct">Activity</label><select id="oAct"></select></div>
+      <div><label for="oRate">Override rate ($ per SY)</label><input id="oRate" type="text" inputmode="decimal" placeholder="e.g. 7.25"></div>
+      <div><label for="oEff">Effective date</label><input id="oEff" type="date"></div>
+      <div><label for="oEnd">End date (optional)</label><input id="oEnd" type="date"></div>
+      <div class="w"><label for="oAppr">Approver</label><input id="oAppr" type="text" maxlength="60"></div>
+      <div class="w"><label for="oWhy">Reason (required)</label><textarea id="oWhy" rows="2" maxlength="255"></textarea></div>
+      <div class="w acts"><button class="btn pri" id="oSave">Save override</button></div>
+      <div class="w errbox" id="oErr"></div>
+    </div>
+  </div>
+</div></div>
+<div class="msg" id="msg"></div>
+
+<script>
+const CONFIG = {
+  portalUrl: 'https://fairoaksranch.maps.arcgis.com',
+  appId: 'DhZk7VoirUPP4Sa2',
+  plannedItemId: '7ac95a464345448aaeddb17755801920',  // Pavement Treatment Planned (Internal): Segments + Treatment_Events
+  ratesReadItemId: '4a0fbf8bca804ef1b7f6067a924c3c9d', // Pavement Estimator Rates (Internal View): Rate_Snapshots + Rate_Overrides
+  ratesEditItemId: 'df344bfe14084239b70fe457322bfe13', // Pavement Estimator Rates (Internal Editing): Rate_Overrides, editors group
+  plannedStatus: 'Planned',
+  editorsGroup: 'Pavement Estimator Editors',
+  center: [-98.645, 29.74], zoom: 13
+};
+
+/* RULES-START  (pure functions; no DOM, no SDK. Tested offline by tests/rules.test.js.) */
+const PavRules=(()=>{
+  const num=v=>{if(v==null)return null;if(typeof v==='number')return isFinite(v)?v:null;const t=String(v).trim().replace(/[$,]/g,'');return /^\d+(\.\d+)?$/.test(t)?Number(t):null};
+  // Calendar dates are stored at noon UTC so they show the same day in Central time.
+  const dayMs=(y,m,d)=>Date.UTC(y,m,d,12);
+  const today=now=>{now=now||new Date();return dayMs(now.getFullYear(),now.getMonth(),now.getDate())};
+  const fromInput=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?dayMs(+m[1],+m[2]-1,+m[3]):null};
+  const ymd=ms=>{if(ms==null)return '';const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0')};
+  // Current snapshot: the Snapshot_ID with the latest Effective_Date on or before today.
+  function currentSnapshot(rows,t){
+    const by=new Map();
+    for(const r of rows){if(!r.Snapshot_ID||r.Effective_Date==null||r.Effective_Date>t)continue;
+      const s=by.get(r.Snapshot_ID)||{id:r.Snapshot_ID,eff:r.Effective_Date,date:r.Snapshot_Date,rates:new Map()};
+      s.eff=Math.max(s.eff,r.Effective_Date);s.rates.set(r.Activity,r);by.set(r.Snapshot_ID,s)}
+    let best=null;for(const s of by.values())if(!best||s.eff>best.eff||(s.eff===best.eff&&s.id>best.id))best=s;
+    return best}
+  const usable=r=>!!r&&r.Rate_Status==='Confirmed'&&typeof r.Rate_Per_SY==='number'&&r.Rate_Per_SY>0;
+  // Active override for an activity on day t: Status Active, Effective_Date <= t, End_Date empty or >= t; latest wins.
+  function activeOverride(ovs,activity,t){
+    let best=null;
+    for(const o of ovs){if(o.Activity!==activity||o.Status!=='Active')continue;
+      if(o.Effective_Date==null||o.Effective_Date>t)continue;if(o.End_Date!=null&&o.End_Date<t)continue;
+      if(!(typeof o.Override_Rate_Per_SY==='number'&&o.Override_Rate_Per_SY>0))continue;
+      if(!best||o.Effective_Date>best.Effective_Date||(o.Effective_Date===best.Effective_Date&&o.OBJECTID>best.OBJECTID))best=o}
+    return best}
+  // Rate for an activity: override > confirmed snapshot rate > unavailable (with the reason).
+  function rateFor(activity,snap,ovs,t){
+    const row=snap?snap.rates.get(activity):null,o=activeOverride(ovs||[],activity,t);
+    if(o)return{rate:o.Override_Rate_Per_SY,source:'Override',override:o,row};
+    if(!snap)return{rate:null,source:null,row:null,why:'No rate snapshot is in effect'};
+    if(!row)return{rate:null,source:null,row:null,why:'Not in snapshot '+snap.id};
+    if(!usable(row))return{rate:null,source:null,row,why:row.Rate_Status&&row.Rate_Status!=='Confirmed'?'Rate is '+row.Rate_Status:'No rate in snapshot'};
+    return{rate:row.Rate_Per_SY,source:'Snapshot',row}}
+  // One estimate line. basis: 'cartegraph' (default) or 'polygon'.
+  function priceLine(line,snap,ovs,t){
+    const sy=line.basis==='polygon'?num(line.polySqYd):num(line.cgSqYd);
+    const r=rateFor(line.activity,snap,ovs,t);
+    const out={sy,rate:r.rate,source:r.source,override:r.override||null,row:r.row,why:r.why||null,cost:null};
+    if(sy==null||sy<=0){out.why=line.basis==='polygon'?'No traced polygon area':'No Cartegraph square yards';return out}
+    if(r.rate==null)return out;
+    out.cost=Math.round(sy*r.rate*100)/100;return out}
+  function totals(priced){
+    let total=0,n=0,missing=0;for(const p of priced){if(p.cost==null)missing++;else{total+=p.cost;n++}}
+    return{total:Math.round(total*100)/100,priced:n,unpriced:missing}}
+  // Override form check. f: {activity, rate, eff, end, approver, reason}; activities: allowed names.
+  function checkOverride(f,activities){
+    const e=[];
+    if(!activities.includes(f.activity))e.push('Choose an activity from the snapshot.');
+    const r=num(f.rate);if(r==null||r<=0)e.push('Override rate: a number greater than 0 ($ per SY).');
+    const eff=fromInput(f.eff),end=f.end?fromInput(f.end):null;
+    if(eff==null)e.push('Effective date is required.');
+    if(f.end&&end==null)e.push('End date is not a valid date.');
+    if(eff!=null&&end!=null&&end<eff)e.push('End date is before the effective date.');
+    if(!String(f.approver||'').trim())e.push('Approver is required.');
+    if(String(f.reason||'').trim().length<5)e.push('Reason is required (at least a few words).');
+    return{errors:e,value:e.length?null:{rate:Math.round(r*100)/100,eff,end,approver:String(f.approver).trim().slice(0,60),reason:String(f.reason).trim().slice(0,255)}}}
+  function csv(rows){
+    const cell=v=>{let s=v==null?'':String(v);if(/^[=+\-@]/.test(s))s="'"+s;return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+    return rows.map(r=>r.map(cell).join(',')).join('\r\n')+'\r\n'}
+  const money=v=>v==null?'':'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return{num,today,fromInput,ymd,currentSnapshot,usable,activeOverride,rateFor,priceLine,totals,checkOverride,csv,money}
+})();
+/* RULES-END */
+</script>
+<script src="https://js.arcgis.com/4.31/"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function toast(t,ok=true){const m=$('msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');clearTimeout(m._t);m._t=setTimeout(()=>m.className='msg',ok?4000:12000)}
+function gateFail(t,showBtn){$('gate').style.display='';$('gateMsg').textContent=t;$('gateBtn').style.display=showBtn?'':'none'}
+const R=PavRules;
+
+if(typeof require!=='function'){
+  gateFail('Cannot load the ArcGIS Maps SDK from js.arcgis.com. Check the network connection, then reload.',false);
+}else require(['esri/identity/OAuthInfo','esri/identity/IdentityManager','esri/portal/Portal','esri/Map','esri/views/MapView',
+  'esri/layers/FeatureLayer','esri/widgets/BasemapToggle'],
+(OAuthInfo,IdM,Portal,EsriMap,MapView,FeatureLayer,BasemapToggle)=>{
+  const info=new OAuthInfo({appId:CONFIG.appId,portalUrl:CONFIG.portalUrl,popup:false,flowType:'auto'});
+  IdM.registerOAuthInfos([info]);
+  const signIn=()=>IdM.getCredential(info.portalUrl+'/sharing');
+  $('gateBtn').onclick=signIn;
+  $('signOut').onclick=e=>{e.preventDefault();IdM.destroyCredentials();location.reload()};
+  IdM.checkSignInStatus(info.portalUrl+'/sharing').catch(()=>signIn()).then(start).catch(err=>{
+    gateFail('Sign-in is needed to use the estimator. '+(err&&err.message?'('+err.message+')':''),true)});
+
+  let view,segLayer,segLV,hl=null,snapTable,ovrRead,ovrEdit=null,canEdit=false,user='',userName='';
+  let segs=new Map(),tasks=[],snap=null,snapRows=[],ovs=[],T=R.today();
+  const est=new Map();  // task key -> {key, task, activity, basis}
+
+  // Find a layer or table by its service name (layer ids in views are not guaranteed).
+  async function byName(itemId,name,opts){
+    for(const id of [0,1,2,3,4]){
+      const fl=new FeatureLayer(Object.assign({portalItem:{id:itemId},layerId:id,outFields:['*']},opts||{}));
+      try{await fl.load()}catch(e){continue}
+      if(fl.sourceJSON&&fl.sourceJSON.name===name)return fl}
+    throw new Error(name+' not found in item '+itemId)}
+  const all=async(fl,where,fields,geom=false)=>{
+    const out=[];let start=0;const page=1000;
+    for(;;){const r=await fl.queryFeatures({where,outFields:fields,returnGeometry:geom,start,num:page,orderByFields:[fl.objectIdField]});
+      out.push(...r.features);if(r.features.length<page)break;start+=page;if(start>20000)break}
+    return out};
+
+  async function start(){
+    const portal=new Portal({url:CONFIG.portalUrl});await portal.load();
+    user=portal.user?portal.user.username:'';userName=portal.user?(portal.user.fullName||user):'';
+    $('who').textContent=userName||'Signed in';
+    let evLayer;
+    try{
+      segLayer=await byName(CONFIG.plannedItemId,'Segments',{popupEnabled:false,
+        renderer:{type:'simple',symbol:{type:'simple-line',color:[212,154,78,0.9],width:3}}});
+      evLayer=await byName(CONFIG.plannedItemId,'Treatment_Events');
+    }catch(e){gateFail('Cannot open the planned pavement work with this account. It is shared with City staff; ask Ernie. ('+(e.message||e)+')',false);return}
+    try{
+      snapTable=await byName(CONFIG.ratesReadItemId,'Rate_Snapshots');
+      ovrRead=await byName(CONFIG.ratesReadItemId,'Rate_Overrides');
+    }catch(e){gateFail('Cannot open the estimator rates with this account. ('+(e.message||e)+')',false);return}
+    try{ovrEdit=await byName(CONFIG.ratesEditItemId,'Rate_Overrides');
+      const ops=(ovrEdit.capabilities&&ovrEdit.capabilities.operations)||{};canEdit=!!ops.supportsAdd&&!!ops.supportsUpdate;
+      if(ops.supportsDelete)showWarn('The overrides editing view allows deletes; it should be add + update only. This app never deletes.');
+    }catch(e){ovrEdit=null;canEdit=false}  // not in the editors group: read-only rates
+    const sf=await all(segLayer,'1=1',['CG_SegmentID','Street','Segment_Name','CG_SqYd_Calc','CG_Length_ft','FunctionalClass','PavementClass','Inactive']);
+    sf.forEach(f=>segs.set(f.attributes.CG_SegmentID,f.attributes));
+    const tf=await all(evLayer,"Status = '"+CONFIG.plannedStatus+"'",['EventID','CG_SegmentID','CG_TaskID','Street','TreatmentCategory','WorkTypeRaw','TreatYear','PlannedDate','Polygon_SqYd','Pct_of_Segment']);
+    tasks=tf.map(f=>f.attributes).map(a=>({key:a.EventID||('T'+a.CG_TaskID),seg:segs.get(a.CG_SegmentID)||null,...a}))
+      .sort((a,b)=>(a.TreatYear||0)-(b.TreatYear||0)||String(a.Street).localeCompare(String(b.Street)));
+    await loadRates();
+    view=new MapView({container:'map',map:new EsriMap({basemap:'dark-gray-vector',layers:[segLayer]}),center:CONFIG.center,zoom:CONFIG.zoom,popupEnabled:false,constraints:{snapToZoom:false}});
+    view.ui.add(new BasemapToggle({view,nextBasemap:'hybrid'}),'bottom-right');
+    segLV=await view.whenLayerView(segLayer);
+    view.on('click',onMapClick);
+    fillFilters();renderList();renderEstimate();
+    $('gate').style.display='none';
+  }
+  function showWarn(t){const w=$('warnbar');w.textContent='⚠ '+t;w.style.display='block'}
+  async function loadRates(){
+    snapRows=(await all(snapTable,'1=1',['*'])).map(f=>f.attributes);
+    ovs=(await all(ovrRead,'1=1',['*'])).map(f=>f.attributes);
+    T=R.today();snap=R.currentSnapshot(snapRows,T);
+    $('snapMeta').innerHTML=snap
+      ?'Rates: Cartegraph snapshot <b>'+esc(snap.id)+'</b> (read '+esc(R.ymd(snap.date))+', in effect from '+esc(R.ymd(snap.eff))+'). '+
+        ovs.filter(o=>R.activeOverride(ovs,o.Activity,T)===o).length+' override(s) in effect.'
+      :'<span style="color:var(--bad)">No rate snapshot is in effect. Lines cannot be priced.</span>';
+    if(!snap)showWarn('No rate snapshot is in effect today. Ask Ernie to check the Rate_Snapshots table.');
+  }
+
+  // ── list ────────────────────────────────────────────────
+  function fillFilters(){
+    const yrs=[...new Set(tasks.map(t=>t.TreatYear).filter(v=>v!=null))].sort();
+    $('fYear').innerHTML='<option value="">All years</option>'+yrs.map(y=>'<option>'+y+'</option>').join('');
+    const tr=[...new Set(tasks.map(t=>t.WorkTypeRaw).filter(Boolean))].sort();
+    $('fTreat').innerHTML='<option value="">All treatments</option>'+tr.map(v=>'<option>'+esc(v)+'</option>').join('');
+    ['fYear','fTreat'].forEach(id=>$(id).onchange=renderList);$('fText').oninput=renderList;
+  }
+  function shown(){
+    const y=$('fYear').value,tr=$('fTreat').value,q=$('fText').value.trim().toUpperCase();
+    return tasks.filter(t=>(!y||String(t.TreatYear)===y)&&(!tr||t.WorkTypeRaw===tr)&&
+      (!q||String(t.Street||'').toUpperCase().includes(q)||String(t.seg&&t.seg.Segment_Name||'').toUpperCase().includes(q)||String(t.CG_SegmentID)===q))}
+  function renderList(){
+    const s=shown();
+    if(!tasks.length){$('list').innerHTML='<div class="empty">No planned work found in the planned view.</div>';return}
+    if(!s.length){$('list').innerHTML='<div class="empty">No planned tasks match.</div>';return}
+    let h='',yr=null;
+    for(const t of s){if(t.TreatYear!==yr){yr=t.TreatYear;h+='<div class="grp">'+esc(yr==null?'Year not set':yr)+'</div>'}
+      const on=est.has(t.key);
+      h+='<label class="row'+(on?' sel':'')+'"><input type="checkbox" data-k="'+esc(t.key)+'"'+(on?' checked':'')+'><div><div class="st">'+esc(t.Street||'(no street)')+
+        ' <span class="nm">seg '+esc(t.CG_SegmentID)+'</span></div><div class="nm">'+esc(t.WorkTypeRaw||t.TreatmentCategory||'—')+
+        (t.seg&&t.seg.CG_SqYd_Calc!=null?' · '+Math.round(t.seg.CG_SqYd_Calc).toLocaleString()+' SY':'')+'</div></div></label>'}
+    $('list').innerHTML=h;
+    $('list').querySelectorAll('input[data-k]').forEach(c=>c.onchange=()=>toggle(c.dataset.k,c.checked));
+  }
+  const taskBy=k=>tasks.find(t=>t.key===k);
+  function toggle(k,on){const t=taskBy(k);if(!t)return;
+    if(on&&!est.has(k))est.set(k,{key:k,task:t,activity:t.WorkTypeRaw||'',basis:'cartegraph'});
+    if(!on)est.delete(k);renderList();renderEstimate()}
+  $('addShown').onclick=()=>{shown().forEach(t=>{if(!est.has(t.key))est.set(t.key,{key:t.key,task:t,activity:t.WorkTypeRaw||'',basis:'cartegraph'})});renderList();renderEstimate()};
+  $('clearSel').onclick=()=>{if(est.size&&!confirm('Clear all '+est.size+' line(s) from the estimate?'))return;est.clear();renderList();renderEstimate()};
+  async function onMapClick(ev){
+    const h=await view.hitTest(ev,{include:[segLayer]});const g=h.results.find(r=>r.graphic&&r.graphic.layer===segLayer);
+    if(!g)return;let id=g.graphic.attributes.CG_SegmentID;
+    if(id==null){try{const r=await segLayer.queryFeatures({objectIds:[g.graphic.attributes[segLayer.objectIdField]],outFields:['CG_SegmentID']});id=r.features[0]&&r.features[0].attributes.CG_SegmentID}catch(e){}}
+    const ts=tasks.filter(t=>t.CG_SegmentID===id);
+    if(!ts.length){toast('No planned tasks on segment '+id+'.',false);return}
+    const allIn=ts.every(t=>est.has(t.key));ts.forEach(t=>toggle(t.key,!allIn));
+  }
+
+  // ── estimate ────────────────────────────────────────────
+  const activities=()=>snap?[...snap.rates.keys()].sort():[];
+  function guidance(row){if(!row||row.OCI_From==null)return '';
+    return 'Protocol trigger OCI '+row.OCI_From+'–'+row.OCI_Through+(row.Skip_Years!=null?', skip '+row.Skip_Years+' yr':'')+' (guidance only)'}
+  function priced(){return [...est.values()].map(l=>({l,p:R.priceLine({activity:l.activity,basis:l.basis,cgSqYd:l.task.seg&&l.task.seg.CG_SqYd_Calc,polySqYd:l.task.Polygon_SqYd},snap,ovs,T)}))}
+  function renderEstimate(){
+    const rows=priced();
+    if(!rows.length){$('lines').innerHTML='<div class="empty">Tick planned tasks in the list, or click segments on the map.</div>'}
+    else $('lines').innerHTML=rows.map(({l,p})=>{
+      const t=l.task,acts=activities();const opts=[...new Set([l.activity,...acts])].filter(Boolean);
+      const tag=p.source==='Override'?'<span class="tag ovr" title="'+esc('Override by '+p.override.Approver+': '+p.override.Reason)+'">override</span>'
+        :p.source==='Snapshot'?'<span class="tag snap">snapshot</span>':'<span class="tag na">unavailable</span>';
+      const hasPoly=R.num(t.Polygon_SqYd)!=null;
+      return '<div class="ln" data-k="'+esc(l.key)+'"><div class="t"><b>'+esc(t.Street||'(no street)')+'</b><span class="nm" style="color:var(--dim);font-size:11px">seg '+esc(t.CG_SegmentID)+(t.TreatYear?' · '+t.TreatYear:'')+'</span><button class="x" data-rm="'+esc(l.key)+'" title="Remove line">×</button></div>'+
+        '<div class="s">'+esc(t.seg?t.seg.Segment_Name||'':'Segment not found in the planned view')+(t.CG_TaskID?' · Cartegraph task '+esc(t.CG_TaskID):'')+(l.activity!==t.WorkTypeRaw?' · planned as '+esc(t.WorkTypeRaw):'')+'</div>'+
+        '<div class="g"><select data-act="'+esc(l.key)+'" title="Treatment (Cartegraph activity)">'+opts.map(a=>'<option'+(a===l.activity?' selected':'')+'>'+esc(a)+'</option>').join('')+'</select>'+
+        '<select data-basis="'+esc(l.key)+'" title="Area basis: Cartegraph calculated square yards (default) or the traced polygon area (whole polygon)"><option value="cartegraph"'+(l.basis==='cartegraph'?' selected':'')+'>Cartegraph SY</option>'+
+        (hasPoly?'<option value="polygon"'+(l.basis==='polygon'?' selected':'')+'>Traced polygon SY</option>':'')+'</select></div>'+
+        '<div class="p"><span>'+(p.sy!=null?Math.round(p.sy).toLocaleString()+' SY':'— SY')+' × '+(p.rate!=null?R.money(p.rate)+'/SY':'—')+' '+tag+'</span><span class="c">'+(p.cost!=null?R.money(p.cost):'—')+'</span></div>'+
+        (p.why&&p.cost==null?'<div class="gd" style="color:var(--bad)">'+esc(p.why)+'. Left out of the total.</div>':'')+
+        (guidance(p.row)?'<div class="gd">'+esc(guidance(p.row))+'</div>':'')+'</div>'}).join('');
+    $('lines').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>toggle(b.dataset.rm,false));
+    $('lines').querySelectorAll('[data-act]').forEach(s=>s.onchange=()=>{est.get(s.dataset.act).activity=s.value;renderEstimate()});
+    $('lines').querySelectorAll('[data-basis]').forEach(s=>s.onchange=()=>{est.get(s.dataset.basis).basis=s.value;renderEstimate()});
+    const tt=R.totals(rows.map(r=>r.p));
+    $('total').textContent=R.money(tt.total)||'$0';
+    $('totNote').textContent=(rows.length?tt.priced+' of '+rows.length+' line(s) priced'+(tt.unpriced?'; '+tt.unpriced+' unpriced line(s) left out of the total':'')+'. ':'')+'Advisory estimate. Cartegraph is the system of record.';
+    $('exportBtn').disabled=!rows.length;
+    if(hl){hl.remove();hl=null}
+    if(segLV&&est.size){const ids=[...new Set([...est.values()].map(l=>l.task.CG_SegmentID))];
+      segLayer.queryObjectIds({where:'CG_SegmentID IN ('+ids.map(i=>"'"+String(i).replace(/'/g,"''")+"'").join(',')+')'}).then(o=>{if(hl)hl.remove();hl=segLV.highlight(o)}).catch(()=>{})}
+  }
+  $('exportBtn').onclick=()=>{
+    const rows=priced();if(!rows.length)return;const tt=R.totals(rows.map(r=>r.p));const now=new Date();
+    const out=[['City of Fair Oaks Ranch - Pavement Estimator (advisory estimate; Cartegraph is the system of record)'],
+      ['Generated',now.toLocaleString(),'By',userName+' ('+user+')'],
+      ['Rate snapshot',snap?snap.id:'none in effect','Snapshot read',snap?R.ymd(snap.date):'','In effect from',snap?R.ymd(snap.eff):''],[],
+      ['Planned year','Street','Segment name','Cartegraph segment ID','Cartegraph task ID','Planned activity','Estimated activity','Area basis','Sq Yd','Rate $/SY','Rate source','Snapshot ID','Snapshot rate $/SY','Override OBJECTID','Override approver','Override reason','Override effective','Cost $','Note']];
+    for(const {l,p} of rows){const t=l.task,o=p.override;
+      out.push([t.TreatYear,t.Street,t.seg&&t.seg.Segment_Name,t.CG_SegmentID,t.CG_TaskID,t.WorkTypeRaw,l.activity,
+        l.basis==='polygon'?'Traced polygon (whole polygon)':'Cartegraph calculated',p.sy==null?'':Math.round(p.sy*100)/100,
+        p.rate==null?'':p.rate,p.source||'unavailable',snap?snap.id:'',p.row&&p.row.Rate_Per_SY!=null?p.row.Rate_Per_SY:'',
+        o?o.OBJECTID:'',o?o.Approver:'',o?o.Reason:'',o?R.ymd(o.Effective_Date):'',p.cost==null?'':p.cost,p.cost==null?(p.why||'')+' - left out of the total':''])}
+    out.push([],['Total (priced lines)','','','','','','','','','','','','','','','','',tt.total,tt.unpriced?tt.unpriced+' unpriced line(s) left out':'']);
+    const p2=x=>String(x).padStart(2,'0');
+    const name='PavementEstimate_'+now.getFullYear()+p2(now.getMonth()+1)+p2(now.getDate())+'-'+p2(now.getHours())+p2(now.getMinutes())+p2(now.getSeconds())+'.csv';
+    const url=URL.createObjectURL(new Blob([R.csv(out)],{type:'text/csv'}));
+    const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+    toast('Saved '+name+' to this PC.')};
+
+  // ── rates + overrides ──────────────────────────────────
+  $('ratesBtn').onclick=()=>{renderRates();$('rates').style.display='flex'};
+  $('ratesClose').onclick=()=>{$('rates').style.display='none'};
+  function renderRates(){
+    $('ratesMeta').innerHTML=(snap?'Snapshot <b>'+esc(snap.id)+'</b>, read '+esc(R.ymd(snap.date))+' from Cartegraph (maintained by Legacy). ':'No snapshot in effect. ')+
+      (canEdit?'You are a price editor: you can add or retire overrides.':'Read only. Overrides are added by the "'+esc(CONFIG.editorsGroup)+'" group.');
+    const acts=activities();
+    let h='<table><tr><th>Activity</th><th>Source</th><th class="n">Snapshot $/SY</th><th>Status</th><th>In effect</th><th>OCI guidance</th></tr>';
+    for(const a of acts){const row=snap.rates.get(a),o=R.activeOverride(ovs,a,T);
+      h+='<tr><td>'+esc(a)+'<div style="color:var(--dim);font-size:11px">'+esc(row.Notes||'')+'</div></td><td>'+esc(row.Source_Name||row.Source_Type||'')+'</td><td class="n">'+(row.Rate_Per_SY!=null?R.money(row.Rate_Per_SY):'—')+'</td><td>'+esc(row.Rate_Status||'')+'</td><td>'+
+        (o?'<span class="tag ovr">override</span> '+R.money(o.Override_Rate_Per_SY)+'<div style="color:var(--dim);font-size:11px">'+esc(o.Approver)+', from '+esc(R.ymd(o.Effective_Date))+': '+esc(o.Reason)+'</div>':R.usable(row)?'<span class="tag snap">snapshot</span>':'<span class="tag na">unavailable</span>')+'</td><td>'+esc(guidance(row).replace(' (guidance only)',''))+'</td></tr>'}
+    h+='</table>';
+    const list=ovs.slice().sort((a,b)=>(b.Effective_Date||0)-(a.Effective_Date||0));
+    h+='<h2 style="font-size:15px;margin-top:12px">Override history</h2>'+(list.length?'<table><tr><th>Activity</th><th class="n">$/SY</th><th>Effective</th><th>End</th><th>Status</th><th>Approver / reason</th><th></th></tr>'+
+      list.map(o=>'<tr><td>'+esc(o.Activity)+'</td><td class="n">'+R.money(o.Override_Rate_Per_SY)+'</td><td>'+esc(R.ymd(o.Effective_Date))+'</td><td>'+esc(R.ymd(o.End_Date))+'</td><td>'+esc(o.Status)+'</td><td>'+esc(o.Approver)+': '+esc(o.Reason)+
+        (o.Editor?'<div style="color:var(--dim);font-size:11px">last edit '+esc(o.Editor)+'</div>':'')+'</td><td>'+(canEdit&&o.Status==='Active'?'<button class="btn sm" data-retire="'+o.OBJECTID+'">Retire</button>':'')+'</td></tr>').join('')+'</table>':'<div class="hint">No overrides yet.</div>');
+    $('ratesTable').innerHTML=h;
+    $('ratesTable').querySelectorAll('[data-retire]').forEach(b=>b.onclick=()=>retire(+b.dataset.retire));
+    $('ovrForm').style.display=canEdit&&snap?'':'none';
+    if(canEdit&&snap){$('oAct').innerHTML=acts.map(a=>'<option>'+esc(a)+'</option>').join('');
+      if(!$('oEff').value)$('oEff').value=R.ymd(T);if(!$('oAppr').value)$('oAppr').value=userName}
+  }
+  $('oSave').onclick=async()=>{
+    const f={activity:$('oAct').value,rate:$('oRate').value,eff:$('oEff').value,end:$('oEnd').value,approver:$('oAppr').value,reason:$('oWhy').value};
+    const c=R.checkOverride(f,activities());
+    if(c.errors.length){$('oErr').innerHTML=c.errors.map(esc).join('<br>');$('oErr').style.display='block';return}
+    $('oErr').style.display='none';
+    const row=snap.rates.get(f.activity);
+    const v=c.value;const base=row&&row.Rate_Per_SY!=null?row.Rate_Per_SY:null;
+    if(!confirm('Save override for '+f.activity+': '+R.money(v.rate)+'/SY from '+R.ymd(v.eff)+(base!=null?' (snapshot '+R.money(base)+'/SY)':'')+'?'))return;
+    $('oSave').disabled=true;
+    try{
+      const r=await ovrEdit.applyEdits({addFeatures:[{attributes:{Activity:f.activity,Base_Snapshot_ID:snap.id,Base_Rate_Per_SY:base,
+        Override_Rate_Per_SY:v.rate,Effective_Date:v.eff,End_Date:v.end,Approver:v.approver,Reason:v.reason,Status:'Active'}}]});
+      const res=(r.addFeatureResults||[])[0];if(!res||res.error)throw new Error(res&&res.error?res.error.message:'no result');
+      ['oRate','oEnd','oWhy'].forEach(id=>$(id).value='');
+      await loadRates();renderRates();renderEstimate();toast('Override saved for '+f.activity+'.');
+    }catch(e){toast('Override not saved: '+(e.message||e),false)}
+    finally{$('oSave').disabled=false}
+  };
+  async function retire(oid){
+    const o=ovs.find(x=>x.OBJECTID===oid);if(!o)return;
+    if(!confirm('Retire the override for '+o.Activity+' ('+R.money(o.Override_Rate_Per_SY)+'/SY)? It stays in the history; the snapshot rate applies again from today.'))return;
+    try{const r=await ovrEdit.applyEdits({updateFeatures:[{attributes:{[ovrEdit.objectIdField]:oid,Status:'Retired',End_Date:T}}]});
+      const res=(r.updateFeatureResults||[])[0];if(!res||res.error)throw new Error(res&&res.error?res.error.message:'no result');
+      await loadRates();renderRates();renderEstimate();toast('Override retired.')}
+    catch(e){toast('Not retired: '+(e.message||e),false)}
+  }
+});
+</script>
+</body>
+</html>
